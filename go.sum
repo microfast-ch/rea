@@ -1,2 +1,4 @@
 github.com/Shopify/go-lua v0.0.0-20220120202609-9ab779377807 h1:b10jUZ94GuJk5GBl0iElM5aGIPPHi7FTRvqOKA7Ku+s=
 github.com/Shopify/go-lua v0.0.0-20220120202609-9ab779377807/go.mod h1:1cxA/QL5xgRGP7Crq6tXSOY4eo//me8GHGMyypHynM8=
+github.com/davecgh/go-spew v1.1.1 h1:vj9j/u1bqnvCEfJOwUhtlOARqs3+rkHYY13jYWTU97c=
+github.com/davecgh/go-spew v1.1.1/go.mod h1:J7Y8YcW2NihsgmVo/mv3lAwl/skON4iLHjSsI+c5H38=

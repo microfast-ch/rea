@@ -2,7 +2,6 @@ package cpxtemplate
 
 import (
 	"log"
-	"os"
 
 	"github.com/Shopify/go-lua"
 )
@@ -13,5 +12,5 @@ func Validate() {
 	if err := lua.DoString(l, "n = 0"); err != nil {
 		log.Fatalln(err)
 	}
-	l.Dump(os.Stdout)
+	log.Println(lua.Stack(l, 1))
 }

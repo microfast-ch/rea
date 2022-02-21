@@ -48,13 +48,17 @@ func (e *LuaEngine) iStartNode(state *lua.State) int {
 	fmt.Printf("StartNode(%d) called\n", nodeId)
 
 	// TODO
+	// - Add new node to parent stack
+	// - If this nodes parent is different than the one on the stack, add EndNode of the old parent
 	return 0
 }
 
 func (e *LuaEngine) iEndNode(state *lua.State) int {
 	nodeId := lua.CheckInteger(state, -1)
 	fmt.Printf("EndNode(%d) called\n", nodeId)
+
 	// TODO
+	// - Remove one level from the parent stack
 	return 0
 }
 
@@ -62,6 +66,7 @@ func (e *LuaEngine) iSetToken(state *lua.State) int {
 	nodeId := lua.CheckInteger(state, -1)
 	fmt.Printf("SetToken(%d) called\n", nodeId)
 	// TODO
+	// - If parent (=original start call) was not on the stack: Do what?
 	return 0
 }
 

@@ -16,7 +16,7 @@ func TestNewLuaTree(t *testing.T) {
   <p2 no="3"><p3>Inside P3</p3></p2>
   <p2 no="4" be="5">Before P3 <p3>Inside P3</p3> after P3</p2>
   <!-- my comment :) -->
-  <p2 no="5">[[ if A ]]Hallo [# A #]</p2>
+  <p2 no="5">[[ if (A) ]]Hallo [# A #]</p2>
   <p2 no="6">[[ endif ]]</p2>
 </p1>`
 
@@ -25,10 +25,13 @@ func TestNewLuaTree(t *testing.T) {
 		t.Fatalf("parsing tree: %v", err)
 	}
 
-	_, err = NewLuaTree(tree)
+	lt, err := NewLuaTree(tree)
 	if err != nil {
 		t.Error(err)
 	}
+
+	t.Log(lt.LuaProg)
+	// TODO: Validate output of LuaProg and the node list
 }
 
 func TestCodeBlockTokenizer(t *testing.T) {

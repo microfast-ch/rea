@@ -1,13 +1,39 @@
 package cpxtemplate
 
-import "testing"
+import (
+	"encoding/xml"
+	"testing"
 
-func TestValidate(t *testing.T) {
-	Validate()
-}
+	"github.com/djboris9/rea/pkg/xmltree"
+)
 
-func TestXMLNodes(t *testing.T) {
-	Validate()
+func TestExec(t *testing.T) {
+	testdata := xml.Header + `
+<p1>
+  <p2 no="1">Inside P2</p2>
+  <p2 no="2">Inside P2 again</p2>
+  <p2 no="3"><p3>Inside P3</p3></p2>
+  <p2 no="4" be="5">Before P3 <p3>Inside P3</p3> after P3</p2>
+  <!-- my comment :) -->
+  <p2 no="5">[[ if (A) then ]]Hallo [# A #]</p2>
+  <p2 no="6">[[ end ]]</p2>
+</p1>`
+
+	tree, err := xmltree.Parse([]byte(testdata))
+	if err != nil {
+		t.Fatalf("parsing tree: %v", err)
+	}
+
+	lt, err := NewLuaTree(tree)
+	if err != nil {
+		t.Error(err)
+	}
+
+	e := NewLuaEngine(lt)
+	err = e.Exec()
+	if err != nil {
+		t.Errorf("executing lua engine: %s", err)
+	}
 }
 
 const testDoc = `<?xml version="1.0" encoding="UTF-8"?>

@@ -25,7 +25,7 @@ func TestNewLuaTree(t *testing.T) {
 		t.Fatalf("parsing tree: %v", err)
 	}
 
-	err = NewLuaTree(tree)
+	_, err = NewLuaTree(tree)
 	if err != nil {
 		t.Error(err)
 	}

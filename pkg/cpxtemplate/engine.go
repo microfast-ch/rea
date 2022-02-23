@@ -184,7 +184,89 @@ func (e *LuaEngine) fillTree(newNode *xmltree.Node) {
 	}
 }
 
+func (e *LuaEngine) iPrint(state *lua.State) int {
+	var sc strings.Builder
+
+	// Based on https://github.com/Shopify/go-lua/blob/9ab7793778076a5d7bd05bae27462473a0a29a4a/base.go#L205
+	n := state.Top()
+	state.Global("tostring")
+	for i := 1; i <= n; i++ {
+		state.PushValue(-1) // function to be called
+		state.PushValue(i)  // value to print
+		state.Call(1, 1)
+		s, ok := state.ToString(-1)
+		if !ok {
+			lua.Errorf(state, "'tostring' must return a string to 'print'")
+			panic("unreachable")
+		}
+		if i > 1 {
+			sc.WriteString("\t")
+		}
+		sc.WriteString(s)
+		state.Pop(1) // pop result
+	}
+	sc.WriteString("\n")
+
+	e.nodePathStr = append(e.nodePathStr, "Print(???)")
+
+	// Create new node and add it to the nodePath
+	chrNode := xml.CharData(sc.String())
+	node := &xmltree.Node{
+		Token:  chrNode,
+		Parent: e.parentStack[len(e.parentStack)-1],
+	}
+	e.nodePath = append(e.nodePath, node)
+
+	// TODO
+	return 0
+}
+
 /*
+<p1>
+  <p2>[[ for A={1..2} ]]</p2>
+  <p3>[# A #]</p3>
+  <p4>[[ end ]]</p4>
+</p1>
+
+## Loop case
+
+StartNode(p1)
+ StartNode(p2)
+  for A={1..2}
+  StartNode(p3)
+   Print(A)
+   StartNode(p4)
+    endfor
+    EndNode(p4)
+   EndNode(p3)
+  EndNode(p2)
+ EndNode(p1)
+
+StartNode(p1)
+ StartNode(p2)
+  StartNode(p3)
+   Print(A)
+   StartNode(p4)
+  StartNode(p3) -- visited 2nd time. So we end the last p3 before it?
+   Print(A)
+   StartNode(p4)
+    EndNode(p4)
+   EndNode(p3)
+  EndNode(p2)
+ EndNode(p1)
+
+## Non loop case
+StartNode(p1)
+ StartNode(p2)
+  if False
+  StartNode(p3)
+   Print(A)
+   StartNode(p4)
+    endif
+    EndNode(p4)
+   EndNode(p3)
+  EndNode(p2)
+ EndNode(p1)
 
 StartNode(p1)
  StartNode(p2)

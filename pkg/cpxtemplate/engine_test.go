@@ -226,6 +226,22 @@ func TestRenderIfBlockSpanned(t *testing.T) {
 		t.Errorf("nodePathStr mismatch (-want +got):\n%s", diff)
 		t.Log(e.lt.LuaProg)
 	}
+}
+
+func TestRenderLoopSpanned(t *testing.T) {
+	testdata := xml.Header + `
+<p>
+  <ul>
+    <li>ABC[[ for i=1,3 do ]]DEF</li>
+    <li>X[# i #]]Y</li>
+    <li>GHJ[[ end ]]JKL</li>
+  </ul>
+</p>`
+
+	e, err := prepareLua(t, testdata)
+	if err != nil {
+		t.Error(err)
+	}
 
 	want := []string{
 		"SetToken(1)",   // XML Header
@@ -258,90 +274,12 @@ func TestRenderIfBlockSpanned(t *testing.T) {
 		"SetToken(20)",  // Spaces
 		"EndNode(21)",   // </p1>
 	}
-	if diff := cmp.Diff(want, e.nodePathStr); diff != "" {
-		t.Errorf("nodePathStr mismatch (-want +got):\n%s", diff)
-		t.Log(e.lt.LuaProg)
-	}
 
-}
-
-func TestRenderIfBlockSpanned(t *testing.T) {
-	testdata := xml.Header + `
-<article>
-  <p1>ABC</p1>
-  <p2>DFG[[ if False then ]]HIJ</p2>
-  <p3>KLM[[ end ]]NOP</p3>
-</article>`
-
-	e, err := prepareLua(t, testdata)
-	if err != nil {
-		t.Error(err)
-	}
-
-	want := []string{
-		"SetToken(1)",   // XML Header
-		"SetToken(2)",   // Spaces
-		"StartNode(3)",  // <article>
-		"SetToken(4)",   // Spaces
-		"StartNode(5)",  // <p1>
-		"SetToken(6)",   // ABC
-		"EndNode(7)",    // </p1>
-		"SetToken(8)",   // Spaces
-		"StartNode(9)",  // <p2>
-		"CharData(10)",  // DFG
-		"EndNode(11)",   // </p2>
-		"SetToken(12)",  // Spaces
-		"StartNode(13)", // <p3>
-		"SetToken(14)",  // NOP
-		"EndNode(15)",   // </p3>
-		"SetToken(16)",  // Spaces
-		"EndNode(17)",   // </article>
-	}
 	if diff := cmp.Diff(want, e.nodePathStr); diff != "" {
 		t.Errorf("nodePathStr mismatch (-want +got):\n%s", diff)
 		t.Log(e.lt.LuaProg)
 	}
 }
-
-//func TestRenderLoopSpanned(t *testing.T) {
-//	testdata := xml.Header + `
-//<p>
-//  <ul>
-//    <li>ABC[[ for i=1,3 do ]]DEF</li>
-//    <li>X[# i #]]Y</li>
-//    <li>GHJ[[ end ]]JKL</li>
-//  </ul>
-//</p>`
-//
-//	e, err := prepareLua(t, testdata)
-//	if err != nil {
-//		t.Error(err)
-//	}
-//
-//	want := []string{
-//		"SetToken(1)",   // XML Header
-//		"SetToken(2)",   // Spaces
-//		"StartNode(3)",  // <article>
-//		"SetToken(4)",   // Spaces
-//		"StartNode(5)",  // <p1>
-//		"SetToken(6)",   // ABC
-//		"EndNode(7)",    // </p1>
-//		"SetToken(8)",   // Spaces
-//		"StartNode(9)",  // <p2>
-//		"CharData(10)",  // DFG
-//		"EndNode(11)",   // </p2>
-//		"SetToken(12)",  // Spaces
-//		"StartNode(13)", // <p3>
-//		"SetToken(14)",  // NOP
-//		"EndNode(15)",   // </p3>
-//		"SetToken(16)",  // Spaces
-//		"EndNode(17)",   // </article>
-//	}
-//	if diff := cmp.Diff(want, e.nodePathStr); diff != "" {
-//		t.Errorf("nodePathStr mismatch (-want +got):\n%s", diff)
-//		t.Log(e.lt.LuaProg)
-//	}
-//}
 
 const testDoc = `<?xml version="1.0" encoding="UTF-8"?>
   <office:body>

@@ -172,52 +172,19 @@ func (e *LuaEngine) iPrint(state *lua.State) int {
 	return 0
 }
 
+// On each node this function is called. It checks if the new node has the same
+// parent as the previous one. If not, it determines the common root and closes
+// the tags parent tags up to it on the old branch. Then it opens all start tags of the new
+// branch so the new tag can be added.
+// TODO: Handle StartNode and EndNodes correctly for the tree
+func (e *LuaEngine) fillTree(newNode *xmltree.Node) {
+	// Check if we have the same parent as the last node
+	if newNode.Parent == e.nodePath[len(e.nodePath)-1] {
+		return
+	}
+}
+
 /*
-<p1>
-  <p2>[[ for A={1..2} ]]</p2>
-  <p3>[# A #]</p3>
-  <p4>[[ end ]]</p4>
-</p1>
-
-## Loop case
-
-StartNode(p1)
- StartNode(p2)
-  for A={1..2}
-  StartNode(p3)
-   Print(A)
-   StartNode(p4)
-    endfor
-    EndNode(p4)
-   EndNode(p3)
-  EndNode(p2)
- EndNode(p1)
-
-StartNode(p1)
- StartNode(p2)
-  StartNode(p3)
-   Print(A)
-   StartNode(p4)
-  StartNode(p3) -- visited 2nd time. So we end the last p3 before it?
-   Print(A)
-   StartNode(p4)
-    EndNode(p4)
-   EndNode(p3)
-  EndNode(p2)
- EndNode(p1)
-
-## Non loop case
-StartNode(p1)
- StartNode(p2)
-  if False
-  StartNode(p3)
-   Print(A)
-   StartNode(p4)
-    endif
-    EndNode(p4)
-   EndNode(p3)
-  EndNode(p2)
- EndNode(p1)
 
 StartNode(p1)
  StartNode(p2)

@@ -79,59 +79,63 @@ func (e *LuaEngine) GetNodePathString() []string {
 
 func (e *LuaEngine) iStartNode(state *lua.State) int {
 	nodeId := lua.CheckInteger(state, -1)
+	node := e.lt.NodeList[nodeId]
 
-	e.nodePathStr = append(e.nodePathStr, fmt.Sprintf("StartNode(%d)", nodeId))
+	// Fill tree, before we add us to the parent stack
+	e.fillTree(node)
 
 	// Append node to the nodePath
-	node := e.lt.NodeList[nodeId]
 	e.nodePath = append(e.nodePath, node)
+	e.nodePathStr = append(e.nodePathStr, fmt.Sprintf("StartNode(%d)", nodeId))
 
 	// Add node to the parent stack
 	e.parentStack = append(e.parentStack, node)
 
-	// TODO
-	// - If this nodes parent is different than the one on the stack, add EndNode of the old parent
 	return 0
 }
 
 func (e *LuaEngine) iEndNode(state *lua.State) int {
 	nodeId := lua.CheckInteger(state, -1)
+	node := e.lt.NodeList[nodeId]
+
+	// Fill tree, before we remove the last parent from the stack
+	e.fillTree(node)
 
 	// Append node to the nodePath
-	node := e.lt.NodeList[nodeId]
 	e.nodePath = append(e.nodePath, node)
-
 	e.nodePathStr = append(e.nodePathStr, fmt.Sprintf("EndNode(%d)", nodeId))
 
-	// TODO
-	// - Remove one level from the parent stack
+	// Remove one level from the parent stack
+	e.parentStack = e.parentStack[:len(e.parentStack)-1]
+
 	return 0
 }
 
 func (e *LuaEngine) iSetToken(state *lua.State) int {
 	nodeId := lua.CheckInteger(state, -1)
+	node := e.lt.NodeList[nodeId]
+
+	// Fill tree, before we are added to the path
+	e.fillTree(node)
 
 	// Append node to the nodePath
-	node := e.lt.NodeList[nodeId]
 	e.nodePath = append(e.nodePath, node)
-
 	e.nodePathStr = append(e.nodePathStr, fmt.Sprintf("SetToken(%d)", nodeId))
 
-	// TODO
-	// - If parent (=original start call) was not on the stack: Do what?
 	return 0
 }
 
 func (e *LuaEngine) iCharData(state *lua.State) int {
 	nodeId := lua.CheckInteger(state, -1)
+	node := e.lt.NodeList[nodeId]
+
+	// Fill tree, before we are added to the path
+	e.fillTree(node)
 
 	// Append node to the nodePath
-	node := e.lt.NodeList[nodeId]
 	e.nodePath = append(e.nodePath, node)
-
 	e.nodePathStr = append(e.nodePathStr, fmt.Sprintf("CharData(%d)", nodeId))
 
-	// TODO
 	return 0
 }
 
@@ -168,7 +172,6 @@ func (e *LuaEngine) iPrint(state *lua.State) int {
 	}
 	e.nodePath = append(e.nodePath, node)
 
-	// TODO
 	return 0
 }
 
@@ -178,10 +181,21 @@ func (e *LuaEngine) iPrint(state *lua.State) int {
 // branch so the new tag can be added.
 // TODO: Handle StartNode and EndNodes correctly for the tree
 func (e *LuaEngine) fillTree(newNode *xmltree.Node) {
-	// Check if we have the same parent as the last node
-	if newNode.Parent == e.nodePath[len(e.nodePath)-1] {
+	// We are the root or are somehow detached. No balancing possible.
+	if newNode.Parent == nil || len(e.parentStack) == 0 {
 		return
 	}
+
+	// Check if we have the same parent as the last node.
+	// Also EndElements are childrens of the StartElement/parent.
+	// This means we are still on the same depth and can safely return here.
+	if newNode.Parent == e.nodePath[len(e.nodePath)-1] {
+		// TODO: Handle when parent is nill or e.nodePath empty (for the first node only)
+		return
+	}
+
+	// TODO
+	fmt.Printf("Propable missbalance at: \n\tstack:%v\n\t%v\n", e.parentStack, e.nodePathStr)
 }
 
 /*

@@ -103,6 +103,7 @@ func isToken(s string) bool {
 
 // codeBlockTokenizer splits the string d into strings with the tokens inside.
 // Tokens are expected to be 2 chars long. The resulting slice contains at least one element.
+// TODO: Add fuzzer
 func codeBlockTokenizer(d string) []string {
 	ret := []string{}
 
@@ -110,6 +111,11 @@ func codeBlockTokenizer(d string) []string {
 	for idx := range d {
 		if idx+1 >= len(d) {
 			break
+		}
+
+		if lastToken > idx {
+			// Skip round if we are still inside a token
+			continue
 		}
 
 		curPos := d[idx : idx+2]

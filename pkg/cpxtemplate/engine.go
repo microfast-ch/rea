@@ -179,6 +179,7 @@ func (e *LuaEngine) iPrint(state *lua.State) int {
 // parent as the previous one. If not, it determines the common root and closes
 // the tags parent tags up to it on the old branch. Then it opens all start tags of the new
 // branch so the new tag can be added.
+// This needs to be called before the node is added to the path.
 // TODO: Handle StartNode and EndNodes correctly for the tree
 func (e *LuaEngine) fillTree(newNode *xmltree.Node) {
 	// We are the root or are somehow detached. No balancing possible.
@@ -186,15 +187,34 @@ func (e *LuaEngine) fillTree(newNode *xmltree.Node) {
 		return
 	}
 
-	// Check if we have the same parent as the last node.
-	// Also EndElements are childrens of the StartElement/parent.
+	previousNode := e.nodePath[len(e.nodePath)-1]
+	lastStack := e.parentStack[len(e.parentStack)-1]
+
+	// Check if we have the same parent as the previous node.
+	// EndElements are children of the StartElement/parent.
 	// This means we are still on the same depth and can safely return here.
-	if newNode.Parent == e.nodePath[len(e.nodePath)-1] {
-		// TODO: Handle when parent is nill or e.nodePath empty (for the first node only)
+	if newNode.Parent == previousNode.Parent {
+		// TODO: Handle when parent is nil or e.nodePath empty (for the first node only)
 		return
 	}
 
+	// Is the previous node is our parent, we don't have to rebalance here
+	if newNode.Parent == previousNode {
+		return
+	}
+
+	// Does or stack match? This happens when we are the next node after an EndNode
+	if newNode.Parent == lastStack {
+		return
+	}
+
+	// Okk, now we have to work. The stack doesn't match the stack the newNode
+	// expected.
 	// TODO
+	// 1. Get common root
+	// 2. Add all EndNodes from the current stack till the root
+	// 3. Add all StartNodes for the newNode stack till the root
+	fmt.Printf("node: %T %v\n", newNode.Token, newNode.Token)
 	fmt.Printf("Propable missbalance at: \n\tstack:%v\n\t%v\n", e.parentStack, e.nodePathStr)
 }
 

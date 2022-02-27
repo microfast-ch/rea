@@ -2,10 +2,12 @@ package cpxtemplate
 
 import (
 	"encoding/xml"
+	"strings"
 	"testing"
 
 	"github.com/djboris9/rea/pkg/xmltree"
 	"github.com/google/go-cmp/cmp"
+	"github.com/google/go-cmp/cmp/cmpopts"
 )
 
 // prepareLua loads the testdata as XML and executes the LuaEngine.
@@ -204,23 +206,22 @@ func TestRenderIfBlockSpanned(t *testing.T) {
 	}
 
 	want := []string{
-		"SetToken(1)",   // XML Header
-		"SetToken(2)",   // Spaces
-		"StartNode(3)",  // <article>
-		"SetToken(4)",   // Spaces
-		"StartNode(5)",  // <p1>
-		"SetToken(6)",   // ABC
-		"EndNode(7)",    // </p1>
-		"SetToken(8)",   // Spaces
-		"StartNode(9)",  // <p2>
-		"CharData(10)",  // DFG
-		"EndNode(11)",   // </p2>
-		"SetToken(12)",  // Spaces
-		"StartNode(13)", // <p3>
-		"SetToken(14)",  // NOP
-		"EndNode(15)",   // </p3>
-		"SetToken(16)",  // Spaces
-		"EndNode(17)",   // </article>
+		"SetToken(1)",              // XML Header
+		"SetToken(2)",              // Spaces
+		"StartNode(3)",             // <article>
+		"SetToken(4)",              // Spaces
+		"StartNode(5)",             // <p1>
+		"SetToken(6)",              // "ABC"
+		"EndNode(7)",               // </p1>
+		"SetToken(8)",              // Spaces
+		"StartNode(9)",             // <p2>
+		"CharData(10)",             // "DFG"
+		"EndNode(p2) - balanced",   // </p2>
+		"StartNode(p3) - balanced", // <p3>
+		"CharData(14)",             // "NOP"
+		"EndNode(15)",              // </p3>
+		"SetToken(16)",             // Spaces
+		"EndNode(17)",              // </article>
 	}
 	if diff := cmp.Diff(want, e.nodePathStr); diff != "" {
 		t.Errorf("nodePathStr mismatch (-want +got):\n%s", diff)
@@ -251,7 +252,8 @@ func TestRenderLoopSpanned(t *testing.T) {
 		"StartNode(5)",  // <ul>
 		"SetToken(6)",   // Spaces
 		"StartNode(7)",  // <li>
-		"SetToken(8)",   // ABC
+		"CharData(8)",   // ABC
+		"CharData(8)",   // DEF
 		"EndNode(9)",    // </li>
 		"SetToken(10)",  // Spaces
 		"StartNode(11)", // <li>
@@ -267,7 +269,7 @@ func TestRenderLoopSpanned(t *testing.T) {
 		"EndNode(13)",   // </li>
 		"SetToken(14)",  // Spaces
 		"StartNode(15)", // <li>
-		"SetToken(16)",  // HIJ
+		"SetToken(16)",  // GHJ
 		"EndNode(17)",   // </li>
 		"SetToken(18)",  // Spaces
 		"EndNode(19)",   // </ul>
@@ -278,7 +280,80 @@ func TestRenderLoopSpanned(t *testing.T) {
 	if diff := cmp.Diff(want, e.nodePathStr); diff != "" {
 		t.Errorf("nodePathStr mismatch (-want +got):\n%s", diff)
 		t.Log(e.lt.LuaProg)
+
+		// TODO: Verify also in every block the xml output
+		var buf strings.Builder
+		enc := xml.NewEncoder(&buf)
+		for i := range e.nodePath {
+			if err := enc.EncodeToken(e.nodePath[i].Token); err != nil {
+				t.Errorf("encoding token %d: %s", i, err)
+			}
+		}
+		enc.Flush()
+		t.Log(buf.String())
+		// TODO: We got here code blocks inside the output. Therefore we need to clone tokens (CharData) or similar
 	}
+}
+
+//func getCommonPaths(node *xmltree.Node, stack []*xmltree.Node) (leftTree []*xmltree.Node, commonParent *xmltree.Node, rightTree []*xmltree.Node) {
+func TestGetCommonPaths(t *testing.T) {
+	nodeA := &xmltree.Node{
+		Token: xml.CharData("nodeA"),
+	}
+	nodeB := &xmltree.Node{
+		Parent: nodeA,
+		Token:  xml.CharData("nodeB"),
+	}
+	nodeC := &xmltree.Node{
+		Parent: nodeB,
+		Token:  xml.CharData("nodeC"),
+	}
+	nodeD := &xmltree.Node{
+		Parent: nodeC,
+		Token:  xml.CharData("nodeD"),
+	}
+	nodeE := &xmltree.Node{
+		Parent: nodeD,
+		Token:  xml.CharData("nodeE"),
+	}
+	nodeX := &xmltree.Node{
+		Parent: nodeB,
+		Token:  xml.CharData("nodeX"),
+	}
+	nodeY := &xmltree.Node{
+		Parent: nodeX,
+		Token:  xml.CharData("nodeY"),
+	}
+	nodeZ := &xmltree.Node{
+		Parent: nodeY,
+		Token:  xml.CharData("nodeZ"),
+	}
+
+	lT, cP, rT := getCommonPaths(nodeA, nil)
+	if diff := cmp.Diff([]*xmltree.Node{}, lT); diff != "" {
+		t.Errorf("getCommonPaths(nodeA, nil).lT mismatch (-want +got):\n%s", diff)
+	}
+	if diff := cmp.Diff((*xmltree.Node)(nil), cP); diff != "" {
+		t.Errorf("getCommonPaths(nodeA, nil).cP mismatch (-want +got):\n%s", diff)
+	}
+	if diff := cmp.Diff([]*xmltree.Node{}, rT); diff != "" {
+		t.Errorf("getCommonPaths(nodeA, nil).rT mismatch (-want +got):\n%s", diff)
+	}
+
+	opt := cmpopts.IgnoreFields(xmltree.Node{}, "Parent")
+
+	stack := []*xmltree.Node{nodeA, nodeB, nodeC, nodeD, nodeE}
+	lT, cP, rT = getCommonPaths(nodeZ, stack)
+	if diff := cmp.Diff([]*xmltree.Node{nodeX, nodeY}, lT, opt); diff != "" {
+		t.Errorf("getCommonPaths(nodeZ, stack).lT mismatch (-want +got):\n%s", diff)
+	}
+	if diff := cmp.Diff(nodeB, cP); diff != "" {
+		t.Errorf("getCommonPaths(nodeZ, stack).cP mismatch (-want +got):\n%s", diff)
+	}
+	if diff := cmp.Diff([]*xmltree.Node{nodeC, nodeD, nodeE}, rT, opt); diff != "" {
+		t.Errorf("getCommonPaths(nodeZ, stack).rT mismatch (-want +got):\n%s", diff)
+	}
+
 }
 
 const testDoc = `<?xml version="1.0" encoding="UTF-8"?>

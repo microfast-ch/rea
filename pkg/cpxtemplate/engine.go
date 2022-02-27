@@ -211,11 +211,77 @@ func (e *LuaEngine) fillTree(newNode *xmltree.Node) {
 	// Okk, now we have to work. The stack doesn't match the stack the newNode
 	// expected.
 	// TODO
-	// 1. Get common root
-	// 2. Add all EndNodes from the current stack till the root
-	// 3. Add all StartNodes for the newNode stack till the root
-	fmt.Printf("node: %T %v\n", newNode.Token, newNode.Token)
-	fmt.Printf("Propable missbalance at: \n\tstack:%v\n\t%v\n", e.parentStack, e.nodePathStr)
+	// 1. Get trees to the common parent
+	leftTree, _, rightTree := getCommonPaths(newNode, e.parentStack)
+
+	// 2. Add all EndNodes from the current stack till the root (rightTree)
+	tmpParent := lastStack
+	for i := range rightTree {
+		elem := rightTree[i].Token.(xml.StartElement).End()
+		e.nodePath = append(e.nodePath, &xmltree.Node{
+			Token:  elem,
+			Parent: tmpParent,
+		})
+		e.nodePathStr = append(e.nodePathStr, fmt.Sprintf("EndNode(%s) - balanced", elem.Name.Local))
+		tmpParent = rightTree[i].Parent
+	}
+
+	// 3. Add all StartNodes for the newNode stack till the root (leftTree)
+	e.nodePath = append(e.nodePath, leftTree...)
+	for i := range leftTree {
+		e.nodePathStr = append(e.nodePathStr, fmt.Sprintf("StartNode(%s) - balanced", leftTree[i].Token.(xml.StartElement).Name.Local))
+	}
+
+	// 4. TODO:
+	// - How to (and if to) duplicate nodes that occure multiple times to have independent objects
+	// - Verify parents are consistent
+	//fmt.Printf("node: %T %v\n", newNode.Token, newNode.Token)
+	//fmt.Printf("Propable missbalance at: \n\tstack:%v\n\t%v\n", e.parentStack, e.nodePathStr)
+}
+
+// getCommonPath returns the first node (from botton) that has the given node
+// as one parent which is also present in the stack.
+// leftTree holds the nodes that are parents of `node` up to the common root in reverse order.
+// rightTree holds the nodes that are parents of `stack` up to the common root in reverse order.
+func getCommonPaths(node *xmltree.Node, stack []*xmltree.Node) (leftTree []*xmltree.Node, commonParent *xmltree.Node, rightTree []*xmltree.Node) {
+	// set empty slices instead of nils
+	leftTree = []*xmltree.Node{}
+	rightTree = []*xmltree.Node{}
+
+	// get commonParent and build leftTree
+nodeLoop:
+	for parent := node.Parent; parent != nil; parent = parent.Parent {
+		for i := range stack {
+			if parent == stack[i] {
+				commonParent = parent
+				break nodeLoop
+			}
+		}
+
+		leftTree = append(leftTree, parent)
+	}
+
+	// build rightTree
+	for i := range stack {
+		missingNode := stack[len(stack)-1-i]
+		if missingNode == commonParent {
+			break
+		}
+		rightTree = append(rightTree, missingNode)
+	}
+
+	// reverse left and right tree, so the resulting trees are appendable to the stack
+	reverseNodes(leftTree)
+	reverseNodes(rightTree)
+
+	return leftTree, commonParent, rightTree
+}
+
+// reverseNodes reverses xmltree.Node slices
+func reverseNodes(nodes []*xmltree.Node) {
+	for i, j := 0, len(nodes)-1; i < j; i, j = i+1, j-1 {
+		nodes[i], nodes[j] = nodes[j], nodes[i]
+	}
 }
 
 /*

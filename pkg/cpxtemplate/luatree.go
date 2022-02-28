@@ -53,7 +53,7 @@ func NewLuaTree(tree *xmltree.Node) (*LuaTree, error) {
 			fmt.Fprintf(&sc, "%sEndNode(%d) --  %v\n", indent, nodeId, v.Name.Local)
 		case xml.CharData:
 			var err error
-			tokenizerState, err = handleCharData(tokenizerState, &sc, indent, v, nodeId)
+			tokenizerState, err = handleCharData(lt, tokenizerState, &sc, indent, nodeId, node)
 			if err != nil {
 				return fmt.Errorf("processing node %d: %w", nodeId, err)
 			}
@@ -143,7 +143,9 @@ const (
 
 // handleCharData implements the block tokenizer that keeps track in which context
 // the xml.CharData is and emits the according commands for the lua program.
-func handleCharData(state blockTokenizerState, sc io.Writer, indent string, d xml.CharData, nodeId uint32) (blockTokenizerState, error) {
+func handleCharData(lt *LuaTree, state blockTokenizerState, sc io.Writer, indent string, nodeId uint32, node *xmltree.Node) (blockTokenizerState, error) {
+	d := node.Token.(xml.CharData)
+
 	toks := codeBlockTokenizer(string(d))
 
 	// We got a CharData that has no blocks inside and are also in a chardata state.
@@ -156,8 +158,14 @@ func handleCharData(state blockTokenizerState, sc io.Writer, indent string, d xm
 	for i := range toks {
 		switch {
 		case state == blockTokenizerCharBlock && !isToken(toks[i]):
+			// Add new CharData node according to original one and set the data to toks[i]
 			if toks[i] != "" {
-				fmt.Fprintf(sc, "%sCharData(%d) --  %s\n", indent, nodeId, sanitizeComment(string(toks[i])))
+				newNode := &xmltree.Node{
+					Token:  xml.CharData(toks[i]),
+					Parent: node.Parent,
+				}
+				newNodeId := lt.RegisterNode(newNode)
+				fmt.Fprintf(sc, "%sCharData(%d) --  %s\n", indent, newNodeId, sanitizeComment(string(toks[i])))
 			}
 		case state == blockTokenizerCharBlock && toks[i] == string(BlockTokenStartCode):
 			state = blockTokenizerCodeBlock

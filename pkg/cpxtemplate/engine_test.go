@@ -60,6 +60,8 @@ func TestRenderEqual(t *testing.T) {
   </ul>
 </p>`
 
+	wantXML := testdata
+
 	e, err := prepareLua(t, testdata)
 	if err != nil {
 		t.Error(err)
@@ -94,6 +96,10 @@ func TestRenderEqual(t *testing.T) {
 		t.Log(e.lt.LuaProg)
 	}
 
+	if diff := cmp.Diff(wantXML, serializeNodePath(t, e.nodePath)); diff != "" {
+		t.Errorf("nodePath as XML mismatch (-want +got):\n%s", diff)
+	}
+
 }
 
 func TestRenderIfBlock(t *testing.T) {
@@ -102,6 +108,15 @@ func TestRenderIfBlock(t *testing.T) {
   <ul>
     <li>ABC</li>
     <li>[[ if False then ]]DFG[[ end ]]</li>
+    <li>HIJ</li>
+  </ul>
+</p>`
+
+	wantXML := xml.Header + `
+<p>
+  <ul>
+    <li>ABC</li>
+    <li></li>
     <li>HIJ</li>
   </ul>
 </p>`
@@ -124,19 +139,23 @@ func TestRenderIfBlock(t *testing.T) {
 		"SetToken(10)",  // Spaces
 		"StartNode(11)", // <li>
 		// "SetToken(12)" --> "DFG" is not printed
-		"EndNode(13)",   // </li>
-		"SetToken(14)",  // Spaces
-		"StartNode(15)", // <li>
-		"SetToken(16)",  // HIJ
-		"EndNode(17)",   // </li>
-		"SetToken(18)",  // Spaces
-		"EndNode(19)",   // </ul>
-		"SetToken(20)",  // Spaces
-		"EndNode(21)",   // </p1>
+		"EndNode(14)",   // </li>
+		"SetToken(15)",  // Spaces
+		"StartNode(16)", // <li>
+		"SetToken(17)",  // HIJ
+		"EndNode(18)",   // </li>
+		"SetToken(19)",  // Spaces
+		"EndNode(20)",   // </ul>
+		"SetToken(21)",  // Spaces
+		"EndNode(22)",   // </p1>
 	}
 	if diff := cmp.Diff(want, e.nodePathStr); diff != "" {
 		t.Errorf("nodePathStr mismatch (-want +got):\n%s", diff)
 		t.Log(e.lt.LuaProg)
+	}
+
+	if diff := cmp.Diff(wantXML, serializeNodePath(t, e.nodePath)); diff != "" {
+		t.Errorf("nodePath as XML mismatch (-want +got):\n%s", diff)
 	}
 }
 
@@ -146,6 +165,15 @@ func TestRenderLoopBlock(t *testing.T) {
   <ul>
     <li>ABC</li>
     <li>[[ for i=1,3 do ]]X[# i #]]Y[[ end ]]</li>
+    <li>HIJ</li>
+  </ul>
+</p>`
+
+	wantXML := xml.Header + `
+<p>
+  <ul>
+    <li>ABC</li>
+    <li>X1YX2YX3Y</li>
     <li>HIJ</li>
   </ul>
 </p>`
@@ -166,30 +194,34 @@ func TestRenderLoopBlock(t *testing.T) {
 		"EndNode(9)",    // </li>
 		"SetToken(10)",  // Spaces
 		"StartNode(11)", // <li>
-		"CharData(12)",  // "X"
+		"CharData(13)",  // "X"
 		"Print(???)",    // "1"
-		"CharData(12)",  // "Y"
-		"CharData(12)",  // "X"
+		"CharData(14)",  // "Y"
+		"CharData(13)",  // "X"
 		"Print(???)",    // "2"
-		"CharData(12)",  // "Y"
-		"CharData(12)",  // "X"
+		"CharData(14)",  // "Y"
+		"CharData(13)",  // "X"
 		"Print(???)",    // "3"
-		"CharData(12)",  // "Y"
-		"EndNode(13)",   // </li>
-		"SetToken(14)",  // Spaces
-		"StartNode(15)", // <li>
-		"SetToken(16)",  // HIJ
-		"EndNode(17)",   // </li>
-		"SetToken(18)",  // Spaces
-		"EndNode(19)",   // </ul>
+		"CharData(14)",  // "Y"
+		"EndNode(15)",   // </li>
+		"SetToken(16)",  // Spaces
+		"StartNode(17)", // <li>
+		"SetToken(18)",  // HIJ
+		"EndNode(19)",   // </li>
 		"SetToken(20)",  // Spaces
-		"EndNode(21)",   // </p1>
+		"EndNode(21)",   // </ul>
+		"SetToken(22)",  // Spaces
+		"EndNode(23)",   // </p1>
 	}
 	if diff := cmp.Diff(want, e.nodePathStr); diff != "" {
 		t.Errorf("nodePathStr mismatch (-want +got):\n%s", diff)
 		t.Log(e.lt.LuaProg)
 	}
 
+	if diff := cmp.Diff(wantXML, serializeNodePath(t, e.nodePath)); diff != "" {
+		t.Errorf("nodePath as XML mismatch (-want +got):\n%s", diff)
+		t.Log(serializeNodePath(t, e.nodePath))
+	}
 }
 
 func TestRenderIfBlockSpanned(t *testing.T) {
@@ -198,6 +230,12 @@ func TestRenderIfBlockSpanned(t *testing.T) {
   <p1>ABC</p1>
   <p2>DFG[[ if False then ]]HIJ</p2>
   <p3>KLM[[ end ]]NOP</p3>
+</article>`
+
+	wantXML := xml.Header + `
+<article>
+  <p1>ABC</p1>
+  <p2>DFG</p2><p3>NOP</p3>
 </article>`
 
 	e, err := prepareLua(t, testdata)
@@ -215,18 +253,25 @@ func TestRenderIfBlockSpanned(t *testing.T) {
 		"EndNode(7)",               // </p1>
 		"SetToken(8)",              // Spaces
 		"StartNode(9)",             // <p2>
-		"CharData(10)",             // "DFG"
+		"CharData(11)",             // "DFG"
 		"EndNode(p2) - balanced",   // </p2>
 		"StartNode(p3) - balanced", // <p3>
-		"CharData(14)",             // "NOP"
-		"EndNode(15)",              // </p3>
-		"SetToken(16)",             // Spaces
-		"EndNode(17)",              // </article>
+		"CharData(18)",             // "NOP"
+		"EndNode(19)",              // </p3>
+		"SetToken(20)",             // Spaces
+		"EndNode(21)",              // </article>
 	}
+
 	if diff := cmp.Diff(want, e.nodePathStr); diff != "" {
 		t.Errorf("nodePathStr mismatch (-want +got):\n%s", diff)
 		t.Log(e.lt.LuaProg)
 	}
+
+	if diff := cmp.Diff(wantXML, serializeNodePath(t, e.nodePath)); diff != "" {
+		t.Errorf("nodePath as XML mismatch (-want +got):\n%s", diff)
+		t.Log(e.lt.LuaProg)
+	}
+
 }
 
 func TestRenderLoopSpanned(t *testing.T) {
@@ -236,6 +281,25 @@ func TestRenderLoopSpanned(t *testing.T) {
     <li>ABC[[ for i=1,3 do ]]DEF</li>
     <li>X[# i #]]Y</li>
     <li>GHJ[[ end ]]JKL</li>
+  </ul>
+</p>`
+
+	wantXML := xml.Header + `
+<p>
+  <ul>
+    <li>ABCDEF</li>
+    <li>X1Y</li>
+    <li>GHJ</li>
+    <li>DEF</li>
+    <li>X1Y</li>
+    <li>GHJ</li>
+    <li>DEF</li>
+    <li>X2Y</li>
+    <li>GHJ</li>
+    <li>DEF</li>
+    <li>X3Y</li>
+    <li>GHJ</li>
+    <li>JKL</li>
   </ul>
 </p>`
 
@@ -280,19 +344,23 @@ func TestRenderLoopSpanned(t *testing.T) {
 	if diff := cmp.Diff(want, e.nodePathStr); diff != "" {
 		t.Errorf("nodePathStr mismatch (-want +got):\n%s", diff)
 		t.Log(e.lt.LuaProg)
-
-		// TODO: Verify also in every block the xml output
-		var buf strings.Builder
-		enc := xml.NewEncoder(&buf)
-		for i := range e.nodePath {
-			if err := enc.EncodeToken(e.nodePath[i].Token); err != nil {
-				t.Errorf("encoding token %d: %s", i, err)
-			}
-		}
-		enc.Flush()
-		t.Log(buf.String())
-		// TODO: We got here code blocks inside the output. Therefore we need to clone tokens (CharData) or similar
 	}
+
+	if diff := cmp.Diff(wantXML, serializeNodePath(t, e.nodePath)); diff != "" {
+		t.Errorf("nodePath as XML mismatch (-want +got):\n%s", diff)
+	}
+}
+
+func serializeNodePath(t *testing.T, nodePath []*xmltree.Node) string {
+	var buf strings.Builder
+	enc := xml.NewEncoder(&buf)
+	for i := range nodePath {
+		if err := enc.EncodeToken(nodePath[i].Token); err != nil {
+			t.Errorf("encoding token %d: %s", i, err)
+		}
+	}
+	enc.Flush()
+	return buf.String()
 }
 
 //func getCommonPaths(node *xmltree.Node, stack []*xmltree.Node) (leftTree []*xmltree.Node, commonParent *xmltree.Node, rightTree []*xmltree.Node) {

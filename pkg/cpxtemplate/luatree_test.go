@@ -50,15 +50,15 @@ func TestNewLuaTree(t *testing.T) {
   SetToken(28) --  "\n  "
   StartNode(29) --  p2
     if (A)  -- CodeBlock
-   CharData(30) --  "Hallo "
+   CharData(31) --  "Hallo "
    Print( A ) -- PrintBlock
-   EndNode(31) --  p2
-  SetToken(32) --  "\n  "
-  StartNode(33) --  p2
+   EndNode(32) --  p2
+  SetToken(33) --  "\n  "
+  StartNode(34) --  p2
     endif  -- CodeBlock
-   EndNode(35) --  p2
-  SetToken(36) --  "\n"
-  EndNode(37) --  p1
+   EndNode(36) --  p2
+  SetToken(37) --  "\n"
+  EndNode(38) --  p1
 `
 
 	tree, err := xmltree.Parse([]byte(testdata))

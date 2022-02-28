@@ -440,6 +440,7 @@ func TestGetCommonPaths(t *testing.T) {
 
 // This tests for marshaling and unmarshaling differences, especially with the namespaces as in
 // - https://github.com/golang/go/issues/9519
+// - https://github.com/golang/go/issues/13400#issuecomment-168334855
 func TestRenderEqualLarge(t *testing.T) {
 	wantXML := testDocLarge
 

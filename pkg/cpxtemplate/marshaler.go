@@ -1,6 +1,7 @@
 package cpxtemplate
 
 import (
+	"bufio"
 	"encoding/xml"
 	"fmt"
 	"io"
@@ -27,6 +28,9 @@ func EncodeToken(e *xml.Encoder, buf io.Writer, t xml.Token) error {
 	case xml.StartElement:
 		e.Flush() // Flush data from encoder, to write to the right location
 		// We cannot call here e.EncodeToken in any case, as it will complain about unbalanced tags
+		w := bufio.NewWriter(buf)
+		writeStartElement(w, v)
+		w.Flush()
 		return nil
 	case xml.EndElement:
 		e.Flush() // Flush data from encoder, to write to the right location
@@ -41,24 +45,33 @@ func EncodeToken(e *xml.Encoder, buf io.Writer, t xml.Token) error {
 	}
 }
 
-func writeStartElement(buf io.Writer, start xml.StartElement) {
+func writeStartElement(buf *bufio.Writer, start xml.StartElement) {
+	buf.WriteByte('<')
+	if start.Name.Space != "" {
+		buf.WriteString(start.Name.Space)
+		buf.WriteByte(':')
+	}
+
+	buf.WriteString(start.Name.Local)
+
 	// Based on https://cs.opensource.google/go/go/+/refs/tags/go1.17.7:src/encoding/xml/marshal.go;l=711;drc=refs%2Ftags%2Fgo1.17.7
 	for _, attr := range start.Attr {
 		name := attr.Name
 		if name.Local == "" {
 			continue
 		}
-		buf.Write(' ')
+		buf.WriteByte(' ')
 		if name.Space != "" {
-			buf.WriteString(p.createAttrPrefix(name.Space))
-			buf.Write(':')
+			buf.WriteString(name.Space)
+			buf.WriteByte(':')
 		}
 		buf.WriteString(name.Local)
 		buf.WriteString(`="`)
-		buf.EscapeString(attr.Value)
+		//p.EscapeString(attr.Value) // TODO: Is the lower line equivalent to the current line?
+		xml.EscapeText(buf, []byte(attr.Value))
 		buf.WriteByte('"')
 	}
 
-	p.WriteByte('>')
+	buf.WriteByte('>')
 
 }

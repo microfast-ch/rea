@@ -164,7 +164,7 @@ func TestRenderLoopBlock(t *testing.T) {
 <p>
   <ul>
     <li>ABC</li>
-    <li>[[ for i=1,3 do ]]X[# i #]]Y[[ end ]]</li>
+    <li>[[ for i=1,3 do ]]X[# i #]Y[[ end ]]</li>
     <li>HIJ</li>
   </ul>
 </p>`
@@ -220,7 +220,6 @@ func TestRenderLoopBlock(t *testing.T) {
 
 	if diff := cmp.Diff(wantXML, serializeNodePath(t, e.nodePath)); diff != "" {
 		t.Errorf("nodePath as XML mismatch (-want +got):\n%s", diff)
-		t.Log(serializeNodePath(t, e.nodePath))
 	}
 }
 
@@ -279,7 +278,7 @@ func TestRenderLoopSpanned(t *testing.T) {
 <p>
   <ul>
     <li>ABC[[ for i=1,3 do ]]DEF</li>
-    <li>X[# i #]]Y</li>
+    <li>X[# i #]Y</li>
     <li>GHJ[[ end ]]JKL</li>
   </ul>
 </p>`
@@ -289,17 +288,11 @@ func TestRenderLoopSpanned(t *testing.T) {
   <ul>
     <li>ABCDEF</li>
     <li>X1Y</li>
-    <li>GHJ</li>
-    <li>DEF</li>
-    <li>X1Y</li>
-    <li>GHJ</li>
-    <li>DEF</li>
+    <li>GHJ</li><li>DEF</li>
     <li>X2Y</li>
-    <li>GHJ</li>
-    <li>DEF</li>
+    <li>GHJ</li><li>DEF</li>
     <li>X3Y</li>
-    <li>GHJ</li>
-    <li>JKL</li>
+    <li>GHJJKL</li>
   </ul>
 </p>`
 
@@ -309,36 +302,57 @@ func TestRenderLoopSpanned(t *testing.T) {
 	}
 
 	want := []string{
-		"SetToken(1)",   // XML Header
-		"SetToken(2)",   // Spaces
-		"StartNode(3)",  // <p1>
-		"SetToken(4)",   // Spaces
-		"StartNode(5)",  // <ul>
-		"SetToken(6)",   // Spaces
-		"StartNode(7)",  // <li>
-		"CharData(8)",   // ABC
-		"CharData(8)",   // DEF
-		"EndNode(9)",    // </li>
-		"SetToken(10)",  // Spaces
-		"StartNode(11)", // <li>
-		"CharData(12)",  // "X"
-		"Print(???)",    // "1"
-		"CharData(12)",  // "Y"
-		"CharData(12)",  // "X"
-		"Print(???)",    // "2"
-		"CharData(12)",  // "Y"
-		"CharData(12)",  // "X"
-		"Print(???)",    // "3"
-		"CharData(12)",  // "Y"
-		"EndNode(13)",   // </li>
-		"SetToken(14)",  // Spaces
-		"StartNode(15)", // <li>
-		"SetToken(16)",  // GHJ
-		"EndNode(17)",   // </li>
-		"SetToken(18)",  // Spaces
-		"EndNode(19)",   // </ul>
-		"SetToken(20)",  // Spaces
-		"EndNode(21)",   // </p1>
+		"SetToken(1)",              // XML Header
+		"SetToken(2)",              // Spaces
+		"StartNode(3)",             // <p1>
+		"SetToken(4)",              // Spaces
+		"StartNode(5)",             // <ul>
+		"SetToken(6)",              // Spaces
+		"StartNode(7)",             // <li>
+		"CharData(9)",              // ABC
+		"CharData(10)",             // DEF
+		"EndNode(11)",              // </li>
+		"SetToken(12)",             // Spaces
+		"StartNode(13)",            // <li>
+		"CharData(15)",             // "X"
+		"Print(???)",               // "1"
+		"CharData(16)",             // "Y"
+		"EndNode(17)",              // </li>
+		"SetToken(18)",             // Spaces
+		"StartNode(19)",            // <li>
+		"CharData(21)",             // GHJ
+		"EndNode(li) - balanced",   // </li>
+		"StartNode(li) - balanced", // <li>
+		"CharData(10)",             // DEF
+		"EndNode(11)",              // </li>
+		"SetToken(12)",             // Spaces
+		"StartNode(13)",            // <li>
+		"CharData(15)",             // "X"
+		"Print(???)",               // "2"
+		"CharData(16)",             // "Y"
+		"EndNode(17)",              // </li>
+		"SetToken(18)",             // Spaces
+		"StartNode(19)",            // <li>
+		"CharData(21)",             // GHJ
+		"EndNode(li) - balanced",   // </li>
+		"StartNode(li) - balanced", // <li>
+		"CharData(10)",             // DEF
+		"EndNode(11)",              // </li>
+		"SetToken(12)",             // Spaces
+		"StartNode(13)",            // <li>
+		"CharData(15)",             // "X"
+		"Print(???)",               // "3"
+		"CharData(16)",             // "Y"
+		"EndNode(17)",              // </li>
+		"SetToken(18)",             // Spaces
+		"StartNode(19)",            // <li>
+		"CharData(21)",             // GHJ
+		"CharData(22)",             // JKL
+		"EndNode(23)",              // </li>
+		"SetToken(24)",             // Spaces
+		"EndNode(25)",              // </ul>
+		"SetToken(26)",             // Spaces
+		"EndNode(27)",              // </p>
 	}
 
 	if diff := cmp.Diff(want, e.nodePathStr); diff != "" {
@@ -424,7 +438,23 @@ func TestGetCommonPaths(t *testing.T) {
 
 }
 
-const testDoc = `<?xml version="1.0" encoding="UTF-8"?>
+// This tests for marshaling and unmarshaling differences, especially with the namespaces as in
+// - https://github.com/golang/go/issues/9519
+func TestRenderEqualLarge(t *testing.T) {
+	wantXML := testDocLarge
+
+	e, err := prepareLua(t, testDocLarge)
+	if err != nil {
+		t.Error(err)
+	}
+
+	if diff := cmp.Diff(wantXML, serializeNodePath(t, e.nodePath)); diff != "" {
+		t.Errorf("nodePath as XML mismatch (-want +got):\n%s", diff)
+	}
+
+}
+
+const testDocLarge = `<?xml version="1.0" encoding="UTF-8"?>
   <office:body>
     <office:text>
       <text:sequence-decls>

@@ -160,7 +160,6 @@ func (e *LuaEngine) iPrint(state *lua.State) int {
 		sc.WriteString(s)
 		state.Pop(1) // pop result
 	}
-	sc.WriteString("\n")
 
 	e.nodePathStr = append(e.nodePathStr, "Print(???)")
 

@@ -54,7 +54,7 @@ func (n *Node) MarshalXML(e *xml.Encoder, start xml.StartElement) error {
 	if n.Token != nil {
 		if err := e.EncodeToken(n.Token); err != nil {
 			if t, ok := n.Token.(xml.ProcInst); !ok {
-				log.Println(t.Target)
+				log.Println(t.Target) // TODO: Why is this here?
 			}
 			return err
 		}

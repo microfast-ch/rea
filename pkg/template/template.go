@@ -6,7 +6,7 @@ import (
 	"io/ioutil"
 	"strings"
 
-	"github.com/djboris9/rea/pkg/cpxtemplate"
+	"github.com/djboris9/rea/pkg/engine"
 	"github.com/djboris9/rea/pkg/odf"
 	"github.com/djboris9/rea/pkg/xmltree"
 )
@@ -37,12 +37,12 @@ func TemplateODT(tmpl *odf.ODF, config *TemplateConfig, out io.Writer) error {
 		return fmt.Errorf("parsing content.xml as tree: %w", err)
 	}
 
-	lt, err := cpxtemplate.NewLuaTree(tree)
+	lt, err := engine.NewLuaTree(tree)
 	if err != nil {
 		return fmt.Errorf("creating lua tree from content.xml: %w", err)
 	}
 
-	e := cpxtemplate.NewLuaEngine(lt)
+	e := engine.NewLuaEngine(lt)
 	err = e.Exec()
 	if err != nil {
 		return fmt.Errorf("executing lua engine: %w", err)

@@ -63,14 +63,24 @@ func validateArchive(rdr *zip.Reader) (string, error) {
 	// 3.2 Validate META-INF/manifest.xml
 	fd, err := rdr.Open("META-INF/manifest.xml")
 	if err != nil {
+		return "", fmt.Errorf("opening manifest.xml: %w", err)
+	}
+	defer fd.Close()
+
+	manifestBytes, err := ioutil.ReadAll(fd)
+	if err != nil {
+		return "", fmt.Errorf("reading manifest.xml: %w", err)
+	}
+
+	_, err = retypeManifest(manifestBytes, []byte("dummy"))
+	if err != nil {
 		return "", fmt.Errorf("validating manifest.xml: %w", err)
 	}
-	fd.Close()
 
 	// 3.3 Validate MIME type
 	fd, err = rdr.Open("mimetype")
 	if err != nil {
-		return "", fmt.Errorf("validating mimetype: %w", err)
+		return "", fmt.Errorf("opening mimetype: %w", err)
 	}
 	defer fd.Close()
 
@@ -104,8 +114,12 @@ type Override struct {
 }
 
 // Writes an ODF package to the given writer. It will use the loaded ODF contents
-// as base and incorporate the overrides. A file `mimetype` must be present.
+// as base and incorporate the overrides. It handles the mimetype and manifest.xml.
 func (o *ODF) Write(w io.Writer, ov Overrides) error {
+	if ov == nil {
+		ov = Overrides{}
+	}
+
 	fd := zip.NewWriter(w)
 
 	// Write mimetype file
@@ -132,11 +146,42 @@ func (o *ODF) Write(w io.Writer, ov Overrides) error {
 		return fmt.Errorf("writing mimetype file to archive: %q", err)
 	}
 
+	// Retype manifest.xml
+	var manifestBytes []byte
+	if v, ok := ov["META-INF/manifest.xml"]; ok && !v.Delete {
+		manifestBytes = v.Data
+	} else {
+		fd, err := o.zipFD.Open("META-INF/manifest.xml")
+		if err != nil {
+			return fmt.Errorf("opening manifest.xml: %q", err)
+		}
+		manifestBytes, err = ioutil.ReadAll(fd)
+		fd.Close()
+
+		if err != nil {
+			return fmt.Errorf("reading manifest.xml: %q", err)
+		}
+	}
+
+	manifest, err := retypeManifest(manifestBytes, mimetype)
+	if err != nil {
+		return fmt.Errorf("retyping manifest.xml: %q", err)
+	}
+
+	ov["META-INF/manifest.xml"] = Override{
+		Data: manifest,
+	}
+
 	// Write files from overrides
 	writtenFiles := []string{"mimetype"} // Hold track of files that doesn't need to be written again
 
 	for fname, fdata := range ov {
 		writtenFiles = append(writtenFiles, fname)
+
+		// Do not write mimetype a second time, if overridden
+		if fname == "mimetype" {
+			continue
+		}
 
 		// Skip writing file if we delete it from archive
 		if fdata.Delete {

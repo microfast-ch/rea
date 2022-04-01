@@ -77,6 +77,7 @@ func (e *LuaEngine) Exec() error {
 func (e *LuaEngine) WriteXML(w io.Writer) error {
 	enc := xml.NewEncoder(w)
 	for i := range e.nodePath {
+		//if err := EncodeToken(enc, w, e.nodePath[i].Token); err != nil { // Is a custom encoder needed
 		if err := enc.EncodeToken(e.nodePath[i].Token); err != nil {
 			return fmt.Errorf("encoding token %d: %w", i, err)
 		}

@@ -56,7 +56,7 @@ func TemplateODT(tmpl *odf.ODF, config *TemplateConfig, out io.Writer) error {
 
 	content := buf.String()
 
-	// Write file, overrideing mimetype and content.xml
+	// Write file, overriding mimetype and content.xml
 	// TODO: Override/Delete thumbnail and remove it from the manifest.xml
 	ov := odf.Overrides{
 		"mimetype": odf.Override{

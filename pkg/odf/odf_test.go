@@ -44,3 +44,54 @@ func TestNewFromFile(t *testing.T) {
 	doc, err = NewFromFile("testdata/not_odf.docx")
 	require.Error(t, err)
 }
+
+func TestWrite(t *testing.T) {
+	// Load valid file
+	doc, err := NewFromFile("testdata/Basic1.ott")
+	require.Nil(t, err)
+
+	// Serialize same file, no overrides
+	buf := new(bytes.Buffer)
+	err = doc.Write(buf, nil)
+	require.Nil(t, err)
+	require.Greater(t, buf.Len(), 500)
+	doc.Close()
+
+	// Load reserialized file
+	doc, err = New(bytes.NewReader(buf.Bytes()), int64(buf.Len()))
+	require.Nil(t, err)
+	require.Equal(t, "application/vnd.oasis.opendocument.text-template", doc.MIMEType())
+	contentFD, err := doc.Open("content.xml")
+	require.Nil(t, err)
+	contentFD.Close()
+
+	// Override mimetype file, delete content.xml and add new file
+	buf = new(bytes.Buffer)
+	ov := Overrides{
+		"mimetype": Override{
+			Data: []byte("application/vnd.oasis.opendocument.text"),
+		},
+		"content.xml": Override{
+			Delete: true,
+		},
+		"extra.txt": Override{
+			Data: []byte("my-extra-file"),
+		},
+	}
+	err = doc.Write(buf, ov)
+	doc.Close()
+
+	// Read document again and check overrides
+	doc, err = New(bytes.NewReader(buf.Bytes()), int64(buf.Len()))
+	require.Nil(t, err)
+	require.Equal(t, "application/vnd.oasis.opendocument.text", doc.MIMEType())
+
+	_, err = doc.Open("content.xml")
+	require.Error(t, err)
+
+	extra, err := doc.Open("extra.txt")
+	require.Nil(t, err)
+	extraData, err := ioutil.ReadAll(extra)
+	require.Nil(t, err)
+	require.Equal(t, []byte("my-extra-file"), extraData)
+}

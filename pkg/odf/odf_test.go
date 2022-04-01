@@ -12,7 +12,7 @@ func TestNew(t *testing.T) {
 	_, err := New(bytes.NewReader([]byte("")), 10)
 	require.Error(t, err)
 
-	testdata, err := ioutil.ReadFile("testdata/Basic1.ott")
+	testdata, err := ioutil.ReadFile("../../testdata/Basic1.ott")
 	require.Nil(t, err)
 
 	doc, err := New(bytes.NewReader(testdata), int64(len(testdata)))
@@ -24,7 +24,7 @@ func TestNew(t *testing.T) {
 	require.Nil(t, err)
 
 	// Test invalid file
-	testdata, err = ioutil.ReadFile("testdata/not_odf.docx")
+	testdata, err = ioutil.ReadFile("../../testdata/not_odf.docx")
 	require.Nil(t, err)
 
 	doc, err = New(bytes.NewReader(testdata), int64(len(testdata)))
@@ -32,7 +32,7 @@ func TestNew(t *testing.T) {
 }
 
 func TestNewFromFile(t *testing.T) {
-	doc, err := NewFromFile("testdata/Basic1.ott")
+	doc, err := NewFromFile("../../testdata/Basic1.ott")
 	require.Nil(t, err)
 
 	require.Equal(t, "application/vnd.oasis.opendocument.text-template", doc.MIMEType())
@@ -41,13 +41,13 @@ func TestNewFromFile(t *testing.T) {
 	require.Nil(t, err)
 
 	// Test invalid file
-	doc, err = NewFromFile("testdata/not_odf.docx")
+	doc, err = NewFromFile("../../testdata/not_odf.docx")
 	require.Error(t, err)
 }
 
 func TestWrite(t *testing.T) {
 	// Load valid file
-	doc, err := NewFromFile("testdata/Basic1.ott")
+	doc, err := NewFromFile("../../testdata/Basic1.ott")
 	require.Nil(t, err)
 
 	// Serialize same file, no overrides

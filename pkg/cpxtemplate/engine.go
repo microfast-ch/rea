@@ -3,6 +3,7 @@ package cpxtemplate
 import (
 	"encoding/xml"
 	"fmt"
+	"io"
 	"strings"
 	"sync"
 
@@ -70,6 +71,28 @@ func (e *LuaEngine) Exec() error {
 	}
 
 	return err
+}
+
+// Can only be called after Exec() has been run
+func (e *LuaEngine) WriteXML(w io.Writer) error {
+	enc := xml.NewEncoder(w)
+	for i := range e.nodePath {
+		if err := enc.EncodeToken(e.nodePath[i].Token); err != nil {
+			return fmt.Errorf("encoding token %d: %w", i, err)
+		}
+	}
+
+	err := enc.Flush()
+	if err != nil {
+		return fmt.Errorf("flushing encoder: %w", err)
+	}
+
+	return nil
+}
+
+// Can only be called after Exec() has been run
+func (e *LuaEngine) GetNodePath() []*xmltree.Node {
+	return e.nodePath
 }
 
 // Can only be called after Exec() has been run

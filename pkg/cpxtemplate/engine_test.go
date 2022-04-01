@@ -365,6 +365,7 @@ func TestRenderLoopSpanned(t *testing.T) {
 	}
 }
 
+// TODO: Change to e.WriteXML
 func serializeNodePath(t *testing.T, nodePath []*xmltree.Node) string {
 	var buf strings.Builder
 	enc := xml.NewEncoder(&buf)

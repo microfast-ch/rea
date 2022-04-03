@@ -8,14 +8,14 @@ import (
 	"io"
 )
 
-const mainDocumentContentType = "application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"
-const openxmlNamespace = "http://schemas.openxmlformats.org/package/2006/content-types"
+const MainDocumentContentType = "application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"
+const OpenxmlNamespace = "http://schemas.openxmlformats.org/package/2006/content-types"
 
 var ErrUnexpectedTokenType = errors.New("unexpected token type")
-var ErrContentTypeValidation = errors.New("[Content_Types].xml of ooxml in invalid")
+var ErrContentTypeValidation = errors.New(" of ooxml in invalid")
 
-// validateManifest parses and validates a manifest.xml and sets a new mimetype.
-// If the mimetype couldn't be set, this function returns an error.
+// Parses and validates a [Content_Types].xml.
+// If the validation failst be set, this function returns an error.
 func validateManifest(b []byte) error {
 	// Decode XML
 	d := xml.NewDecoder(bytes.NewReader(b))
@@ -54,7 +54,7 @@ func validateManifest(b []byte) error {
 
 func hasCorrextXmlns(e xml.StartElement) bool {
 	for _, a := range e.Attr {
-		if a.Name.Local == "xmlns" && a.Value == openxmlNamespace {
+		if a.Name.Local == "xmlns" && a.Value == OpenxmlNamespace {
 			return true
 		}
 	}
@@ -70,7 +70,7 @@ func partNameIsDocument(e xml.StartElement) bool {
 		if a.Name.Local == "PartName" && a.Value == "/word/document.xml" {
 			hasDocPart = true
 		}
-		if a.Name.Local == "ContentType" && a.Value == mainDocumentContentType {
+		if a.Name.Local == "ContentType" && a.Value == MainDocumentContentType {
 			hasCorrectMimeType = true
 		}
 	}

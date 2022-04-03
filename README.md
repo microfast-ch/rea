@@ -21,11 +21,17 @@ rea render -f job.yaml
 ```
 
 Shorthands:
-- `-t`: Template
-- `-f`: Render description file
-- `-i`: Input data file
-- `-o`: Output file
-- `-O`: Output file format
+- `-d`: Debug bundle file?
+- `-b`: Bundle file?
+
+## Bundle file
+Contents:
+- Job file
+- LuaProg
+- Input Document
+- Input Data
+- XML Tree
+- Version
 
 ## Data file
 ```

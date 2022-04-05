@@ -442,8 +442,8 @@ func TestGetCommonPaths(t *testing.T) {
 func TestRenderFragmentInCodeBlock(t *testing.T) {
 	testdata := xml.Header + `
 <article>
-  <p1>[[ if False <span>then </span>]]No Print[[ end ]]</p1>
-  <p2>[[ if True <span>then </span>]]Print[[ end ]]</p2>
+  <p1>[[ if false <span>then </span>]]No Print[[ end ]]</p1>
+  <p2>[[ if true <span>then </span>]]Print[[ end ]]</p2>
 </article>`
 
 	wantXML := xml.Header + `
@@ -457,23 +457,63 @@ func TestRenderFragmentInCodeBlock(t *testing.T) {
 		t.Error(err)
 	}
 
-	want := []string{ // TODO: Adapt!
-		"SetToken(1)",              // XML Header
-		"SetToken(2)",              // Spaces
-		"StartNode(3)",             // <article>
-		"SetToken(4)",              // Spaces
-		"StartNode(5)",             // <p1>
-		"SetToken(6)",              // "ABC"
-		"EndNode(7)",               // </p1>
-		"SetToken(8)",              // Spaces
-		"StartNode(9)",             // <p2>
-		"CharData(11)",             // "DFG"
-		"EndNode(p2) - balanced",   // </p2>
-		"StartNode(p3) - balanced", // <p3>
-		"CharData(18)",             // "NOP"
-		"EndNode(19)",              // </p3>
-		"SetToken(20)",             // Spaces
-		"EndNode(21)",              // </article>
+	want := []string{
+		"SetToken(1)",   // XML Header
+		"SetToken(2)",   // Spaces
+		"StartNode(3)",  // <article>
+		"SetToken(4)",   // Spaces
+		"StartNode(5)",  // <p1>
+		"EndNode(12)",   // </p1>
+		"SetToken(13)",  // Spaces
+		"StartNode(14)", // <p2>
+		"CharData(20)",  // "Print"
+		"EndNode(21)",   // </p2>
+		"SetToken(22)",  // Spaces
+		"EndNode(23)",   // </article>
+	}
+
+	if diff := cmp.Diff(want, e.nodePathStr); diff != "" {
+		t.Errorf("nodePathStr mismatch (-want +got):\n%s", diff)
+		t.Log(e.lt.LuaProg)
+	}
+
+	if diff := cmp.Diff(wantXML, serializeNodePath(t, e.nodePath)); diff != "" {
+		t.Errorf("nodePath as XML mismatch (-want +got):\n%s", diff)
+		t.Log(e.lt.LuaProg)
+	}
+}
+
+func TestRenderFragmentInCodeDirective(t *testing.T) {
+	testdata := xml.Header + `
+<article>
+  <p1>[[ if false th<span>en </span>]]No Print[[ end ]]</p1>
+  <p2>[[ if true th<span>en </span>]]Print[[ end ]]</p2>
+</article>`
+
+	wantXML := xml.Header + `
+<article>
+  <p1></p1>
+  <p2>Print</p2>
+</article>`
+
+	e, err := prepareLua(t, testdata)
+	if err != nil {
+		t.Error(err)
+	}
+
+	want := []string{
+		"SetToken(1)",   // XML Header
+		"SetToken(2)",   // Spaces
+		"StartNode(3)",  // <article>
+		"SetToken(4)",   // Spaces
+		"StartNode(5)",  // <p1>
+		"EndNode(12)",   // </p1>
+		"SetToken(13)",  // Spaces
+		"StartNode(14)", // <p2>
+		"CharData(20)",  // "Print"
+		"EndNode(21)",   // </p2>
+		"SetToken(22)",  // Spaces
+		"EndNode(23)",   // </article>
 	}
 
 	if diff := cmp.Diff(want, e.nodePathStr); diff != "" {

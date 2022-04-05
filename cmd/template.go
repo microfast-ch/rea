@@ -80,6 +80,7 @@ func templateCmdRun(cmd *cobra.Command, args []string) {
 		bundleW.AddLuaProg(tpd.TemplateLuaProg)
 		bundleW.AddLuaNodeList(tpd.TemplateLuaNodeList)
 		bundleW.AddTemplateXMLTree(tpd.TemplateXMLTree)
+		bundleW.AddLuaNodePathStr(tpd.LuaNodePathStr)
 		bundleW.AddContentXML(tpd.ContentXML)
 		if errB := bundleW.Close(); errB != nil {
 			log.Printf("closing bundle writer: %s", errB)

@@ -46,11 +46,17 @@ func NewLuaTree(tree *xmltree.Node) (*LuaTree, error) {
 		// Indent script for better readability
 		indent := strings.Repeat(" ", int(depth))
 
+		// Ignore tokens that slipped inside of a code or print block
+		inhibitor := ""
+		if tokenizerState != blockTokenizerCharBlock {
+			inhibitor = "-- inhibit call to "
+		}
+
 		switch v := node.Token.(type) {
 		case xml.StartElement:
-			fmt.Fprintf(&sc, "%sStartNode(%d) --  %v\n", indent, nodeId, v.Name.Local)
+			fmt.Fprintf(&sc, "%s%sStartNode(%d) --  %v\n", indent, inhibitor, nodeId, v.Name.Local)
 		case xml.EndElement:
-			fmt.Fprintf(&sc, "%sEndNode(%d) --  %v\n", indent, nodeId, v.Name.Local)
+			fmt.Fprintf(&sc, "%s%sEndNode(%d) --  %v\n", indent, inhibitor, nodeId, v.Name.Local)
 		case xml.CharData:
 			var err error
 			tokenizerState, err = handleCharData(lt, tokenizerState, &sc, indent, nodeId, node)
@@ -58,7 +64,7 @@ func NewLuaTree(tree *xmltree.Node) (*LuaTree, error) {
 				return fmt.Errorf("processing node %d: %w", nodeId, err)
 			}
 		case xml.Directive, xml.Comment, xml.ProcInst:
-			fmt.Fprintf(&sc, "%sSetToken(%d) -- Type: %T\n", indent, nodeId, v)
+			fmt.Fprintf(&sc, "%s%sSetToken(%d) -- Type: %T\n", indent, inhibitor, nodeId, v)
 		default:
 			return fmt.Errorf("unknown token type %T", v)
 		}

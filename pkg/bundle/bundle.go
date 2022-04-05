@@ -52,6 +52,10 @@ func (b *BundleWriter) AddContentXML(doc string) error {
 	return b.writeFile("processed/content.xml", doc)
 }
 
+func (b *BundleWriter) AddLuaNodePathStr(nodePath []string) error {
+	return b.writeFile("processed/nodepath.lua", strings.Join(nodePath, "\n"))
+}
+
 func (b *BundleWriter) writeFile(fname, content string) error {
 	hdr := &tar.Header{
 		Name: fname,

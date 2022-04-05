@@ -54,6 +54,7 @@ func TemplateODT(tmpl *odf.ODF, config *TemplateConfig, out io.Writer) (*Templat
 	if err != nil {
 		return tpd, fmt.Errorf("executing lua engine: %w", err)
 	}
+	tpd.LuaNodePathStr = e.GetNodePathString()
 
 	var buf strings.Builder
 	err = e.WriteXML(&buf)
@@ -96,5 +97,6 @@ type TemplateProcessingData struct {
 	TemplateLuaNodeList []*xmltree.Node
 
 	// Processed data
-	ContentXML string
+	LuaNodePathStr []string
+	ContentXML     string
 }

@@ -39,6 +39,9 @@ func NewLuaTree(tree *xmltree.Node) (*LuaTree, error) {
 	// CharData tokenizer state
 	tokenizerState := blockTokenizerCharBlock
 
+	// Collector for inhibited calls
+	inhibitor := ""
+
 	err := xmltree.Walk(tree, func(node *xmltree.Node, depth uint) error {
 		// We register a node id for each node to keep track of it
 		nodeId := lt.RegisterNode(node)
@@ -47,16 +50,25 @@ func NewLuaTree(tree *xmltree.Node) (*LuaTree, error) {
 		indent := strings.Repeat(" ", int(depth))
 
 		// Ignore tokens that slipped inside of a code or print block
-		inhibitor := ""
-		if tokenizerState != blockTokenizerCharBlock {
-			inhibitor = "-- inhibit call to "
+		if _, ok := node.Token.(xml.CharData); (tokenizerState == blockTokenizerCodeBlock || tokenizerState == blockTokenizerPrintBlock) && !ok {
+			// TODO: Collect inhibited calls to StartNode, EndNode, SetToken
+			inhibitor += fmt.Sprintf("%T,", node.Token)
+			return nil
+		}
+
+		// We had something collected in the inhibitor and now we are out of the code or print block.
+		// So print the inhibited calls and reset the inhibitor
+		// TODO: We should print the collected inhibited calls after we left the print or code block
+		if inhibitor != "" && tokenizerState == blockTokenizerCharBlock {
+			fmt.Fprintf(&sc, "%s -- Inhibited calls to: %s\n", indent, inhibitor)
+			inhibitor = ""
 		}
 
 		switch v := node.Token.(type) {
 		case xml.StartElement:
-			fmt.Fprintf(&sc, "%s%sStartNode(%d) --  %v\n", indent, inhibitor, nodeId, v.Name.Local)
+			fmt.Fprintf(&sc, "%sStartNode(%d) --  %v\n", indent, nodeId, v.Name.Local)
 		case xml.EndElement:
-			fmt.Fprintf(&sc, "%s%sEndNode(%d) --  %v\n", indent, inhibitor, nodeId, v.Name.Local)
+			fmt.Fprintf(&sc, "%sEndNode(%d) --  %v\n", indent, nodeId, v.Name.Local)
 		case xml.CharData:
 			var err error
 			tokenizerState, err = handleCharData(lt, tokenizerState, &sc, indent, nodeId, node)
@@ -64,7 +76,7 @@ func NewLuaTree(tree *xmltree.Node) (*LuaTree, error) {
 				return fmt.Errorf("processing node %d: %w", nodeId, err)
 			}
 		case xml.Directive, xml.Comment, xml.ProcInst:
-			fmt.Fprintf(&sc, "%s%sSetToken(%d) -- Type: %T\n", indent, inhibitor, nodeId, v)
+			fmt.Fprintf(&sc, "%sSetToken(%d) -- Type: %T\n", indent, nodeId, v)
 		default:
 			return fmt.Errorf("unknown token type %T", v)
 		}

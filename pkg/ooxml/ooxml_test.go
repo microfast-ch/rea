@@ -73,6 +73,7 @@ func TestWrite(t *testing.T) {
 		},
 	}
 	err = doc.Write(buf, ov)
+	require.Nil(t, err)
 	doc.Close()
 
 	// Read document again and check overrides
@@ -81,7 +82,7 @@ func TestWrite(t *testing.T) {
 	require.Equal(t, MainDocumentContentType, doc.MIMEType())
 
 	updatedDoc, err := doc.Open("word/document.xml")
-	require.Error(t, err)
+	require.Nil(t, err)
 	updatedData, err := ioutil.ReadAll(updatedDoc)
 	require.Nil(t, err)
 	require.Equal(t, []byte("my-extra-file"), updatedData)

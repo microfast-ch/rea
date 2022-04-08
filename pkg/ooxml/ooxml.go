@@ -95,23 +95,10 @@ func (o *OOXML) Write(w io.Writer, ov Overrides) error {
 	fd := zip.NewWriter(w)
 
 	// Write files from overrides
-	writtenFiles := []string{
-		"[Content_Types].xml",
-		"_rels/.rels",
-		"docProps/app.xml",
-		"docProps/core.xml",
-		"word/_rels/document.xml.rels",
-		"word/fontTable.xml",
-		"word/settings.xml",
-		"word/styles.xml"} // Hold track of files that doesn't need to be written again
+	writtenFiles := []string{}
 
 	for fname, fdata := range ov {
 		writtenFiles = append(writtenFiles, fname)
-
-		// Do not write any written file a second time, even if overridden
-		if slices.Contains(writtenFiles, fname) {
-			continue
-		}
 
 		// Skip writing file if we delete it from archive
 		if fdata.Delete {

@@ -493,7 +493,7 @@ func TestRenderFragmentInCodeDirective(t *testing.T) {
 	wantXML := xml.Header + `
 <article>
   <p1></p1>
-  <p2>Print</p2>
+  <p2><span></span>Print</p2>
 </article>`
 
 	e, err := prepareLua(t, testdata)

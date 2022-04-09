@@ -2,6 +2,7 @@ package engine
 
 import (
 	"encoding/xml"
+	"errors"
 	"fmt"
 	"io"
 	"strings"
@@ -36,49 +37,17 @@ func NewLuaTree(tree *xmltree.Node) (*LuaTree, error) {
 	// Temporary lua script holder
 	var sc strings.Builder
 
-	// CharData tokenizer state
-	tokenizerState := blockTokenizerCharBlock
-
-	// Collector for inhibited calls
-	inhibitor := ""
+	// Initialize FSM
+	fsm := newFSM(&sc, lt.RegisterNode)
 
 	err := xmltree.Walk(tree, func(node *xmltree.Node, depth uint) error {
 		// We register a node id for each node to keep track of it
 		nodeId := lt.RegisterNode(node)
 
-		// Indent script for better readability
-		indent := strings.Repeat(" ", int(depth))
-
-		// Ignore tokens that slipped inside of a code or print block
-		if _, ok := node.Token.(xml.CharData); (tokenizerState == blockTokenizerCodeBlock || tokenizerState == blockTokenizerPrintBlock) && !ok {
-			// TODO: Collect inhibited calls to StartNode, EndNode, SetToken
-			inhibitor += fmt.Sprintf("%T,", node.Token)
-			return nil
-		}
-
-		// We had something collected in the inhibitor and now we are out of the code or print block.
-		// So print the inhibited calls and reset the inhibitor
-		// TODO: We should print the collected inhibited calls after we left the print or code block
-		if inhibitor != "" && tokenizerState == blockTokenizerCharBlock {
-			fmt.Fprintf(&sc, "%s -- Inhibited calls to: %s\n", indent, inhibitor)
-			inhibitor = ""
-		}
-
-		switch v := node.Token.(type) {
-		case xml.StartElement:
-			fmt.Fprintf(&sc, "%sStartNode(%d) --  %v\n", indent, nodeId, v.Name.Local)
-		case xml.EndElement:
-			fmt.Fprintf(&sc, "%sEndNode(%d) --  %v\n", indent, nodeId, v.Name.Local)
-		case xml.CharData:
-			var err error
-			tokenizerState, err = handleCharData(lt, tokenizerState, &sc, indent, nodeId, node)
-			if err != nil {
-				return fmt.Errorf("processing node %d: %w", nodeId, err)
-			}
-		case xml.Directive, xml.Comment, xml.ProcInst:
-			fmt.Fprintf(&sc, "%sSetToken(%d) -- Type: %T\n", indent, nodeId, v)
-		default:
-			return fmt.Errorf("unknown token type %T", v)
+		// Run an FSM step
+		err := fsm.Next(nodeId, node, depth)
+		if err != nil {
+			return fmt.Errorf("executing FSM for node %d: %w", nodeId, err)
 		}
 
 		return nil
@@ -101,73 +70,113 @@ const (
 	luatreeFSMStatePrint luatreeFSMState = iota // We are in a print block
 )
 
+type nodeRegisterer func(*xmltree.Node) uint32
+
 // Finite State Machine
 type luatreeFSM struct {
 	inhibition []string
 	state      luatreeFSMState
-	sc         *io.Writer
-	indent     string
+	sc         io.Writer
+	curIndent  string
+	registerer nodeRegisterer
 }
 
-func (fsm *luatreeFSM) Run() error {
-	for {
-		token := *xmltree.Node{} // TODO: Feed this from walk function
-
-		var err error
-		switch v := node.Token.(type) {
-		case xml.CharData:
-			toks := codeBlockTokenizer(string(v))
-			for i := range toks {
-				switch toks[i] {
-				case BlockTokenStartCode:
-					err = fsm.processStartCode()
-				case BlockTokenEndCode:
-					err = fsm.processEndCode()
-				case BlockTokenStartPrint:
-					err = fsm.processStartCode()
-				case BlockTokenEndPrint:
-					err = fsm.processEndCode()
-				default:
-					err = fsm.processChar(toks[i], len(toks) == 1)
-				}
-				if err != nil {
-					return fmt.Errorf("state transition: %w", err) // TODO message
-				}
-			}
-		case xml.StartElement:
-			err = fsm.processStartElement(v)
-		case xml.EndElement:
-			err = fsm.processEndElement(v)
-		case xml.Directive, xml.Comment, xml.ProcInst:
-			err = fsm.processNonstructuringElement(v)
-		default:
-			err = fmt.Errorf("unknown token %T", v)
-		}
-
-		if err != nil {
-			return fmt.Errorf("state transition: %w", err) // TODO message
-		}
-
+func newFSM(buf io.Writer, registerer nodeRegisterer) *luatreeFSM {
+	return &luatreeFSM{
+		inhibition: []string{},
+		state:      luatreeFSMStateChar,
+		sc:         buf,
+		registerer: registerer,
 	}
 }
 
-func (fsm *luatreeFSM) processChar(nodeId uint32, node *xmltree.Node, curToken []byte, singleToken bool) error {
+func (fsm *luatreeFSM) Next(nodeId uint32, node *xmltree.Node, depth uint) error {
+	fsm.curIndent = strings.Repeat(" ", int(depth))
+
+	var err error
+
+	switch v := node.Token.(type) {
+	case xml.CharData:
+		toks := codeBlockTokenizer(string(v))
+		for i := range toks {
+			switch toks[i] {
+			case "":
+				continue // Skip empty token processing
+			case string(BlockTokenStartCode):
+				err = fsm.processStartCode(nodeId, node)
+			case string(BlockTokenEndCode):
+				err = fsm.processEndCode(nodeId, node)
+			case string(BlockTokenStartPrint):
+				err = fsm.processStartPrint(nodeId, node)
+			case string(BlockTokenEndPrint):
+				err = fsm.processEndPrint(nodeId, node)
+			default:
+				err = fsm.processChar(nodeId, node, toks[i], len(toks) == 1)
+			}
+			if err != nil {
+				return fmt.Errorf("state transition failed for token %q in node %d: %w", toks[i], nodeId, err)
+			}
+		}
+	case xml.StartElement:
+		err = fsm.processStartElement(nodeId, node)
+	case xml.EndElement:
+		err = fsm.processEndElement(nodeId, node)
+	case xml.Directive, xml.Comment, xml.ProcInst:
+		err = fsm.processNonstructuringElement(nodeId, node)
+	default:
+		err = fmt.Errorf("unknown token %T in node %d", v, nodeId)
+	}
+
+	if err != nil {
+		return fmt.Errorf("state transition failed for node %d: %w", nodeId, err)
+	}
+
+	return nil
+}
+
+func (fsm *luatreeFSM) processStartElement(nodeId uint32, node *xmltree.Node) error {
+	element, ok := node.Token.(xml.StartElement)
+	if !ok {
+		return errors.New("supplied wrong type for node")
+	}
+
+	fmt.Fprintf(fsm.sc, "%sStartNode(%d) --  %v\n", fsm.curIndent, nodeId, element.Name.Local)
+	// TODO: Inhibition
+	return nil
+}
+
+func (fsm *luatreeFSM) processEndElement(nodeId uint32, node *xmltree.Node) error {
+	element, ok := node.Token.(xml.EndElement)
+	if !ok {
+		return errors.New("supplied wrong type for node")
+	}
+
+	fmt.Fprintf(fsm.sc, "%sEndNode(%d) --  %v\n", fsm.curIndent, nodeId, element.Name.Local)
+	// TODO: Inhibition
+	return nil
+}
+
+func (fsm *luatreeFSM) processChar(nodeId uint32, node *xmltree.Node, curToken string, singleToken bool) error {
 	switch fsm.state {
 	case luatreeFSMStateCode, luatreeFSMStatePrint:
-		// If we are in a code or print context, we must directly
-		// print the value
-		fmt.Fprintf(fsm.sc, "%s", next)
+		// If we are in a code or print context, we print the parts directly
+		// as the envelope is handled in the according start and end blocks
+		fmt.Fprintf(fsm.sc, "%s", curToken)
+	//case luatreeFSMStatePrint:
+	// If we are in a print context, we print the code directly
+	//		fmt.Fprintf(fsm.sc, "%sPrint(%s) -- PrintBlock\n", fsm.curIndent, curToken)
 	case luatreeFSMStateChar:
 		if singleToken {
-			fmt.Fprintf(&sc, "%sSetToken(%d) -- Type: %T\n", fsm.indent, nodeId, node)
+			// Use `SetToken` instead of `CharData` if we have are in a xml.CharData without other tokens
+			fmt.Fprintf(fsm.sc, "%sSetToken(%d) --  %s\n", fsm.curIndent, nodeId, sanitizeComment(curToken))
 		} else {
-			// Add new CharData node according to original one and set the data to toks[i]
+			// Add new CharData node according to original one and set the data to our token content
 			newNode := &xmltree.Node{
 				Token:  xml.CharData(curToken),
 				Parent: node.Parent,
 			}
-			newNodeId := lt.RegisterNode(newNode)
-			fmt.Fprintf(sc, "%sCharData(%d) --  %s\n", fsm.indent, newNodeId, sanitizeComment(curToken))
+			newNodeId := fsm.registerer(newNode)
+			fmt.Fprintf(fsm.sc, "%sCharData(%d) --  %s\n", fsm.curIndent, newNodeId, sanitizeComment(curToken))
 		}
 	default:
 		return errors.New("invalid state")
@@ -176,64 +185,72 @@ func (fsm *luatreeFSM) processChar(nodeId uint32, node *xmltree.Node, curToken [
 	return nil
 }
 
-func (fsm *luatreeFSM) processStartCode() error {
-	// TODO: Check we came from a valid state
+func (fsm *luatreeFSM) processStartCode(nodeId uint32, node *xmltree.Node) error {
+	switch fsm.state {
+	case luatreeFSMStateCode, luatreeFSMStatePrint:
+		return errors.New("start code block reached from inside a print or code block")
+	case luatreeFSMStateChar:
+		fmt.Fprintf(fsm.sc, "%s", fsm.curIndent)
+		fsm.state = luatreeFSMStateCode
+	default:
+		return errors.New("invalid state")
+	}
 
-	fsm.state = luatreeFSMStateCode
+	return nil
+}
+
+func (fsm *luatreeFSM) processEndCode(nodeId uint32, node *xmltree.Node) error {
+	switch fsm.state {
+	case luatreeFSMStateChar, luatreeFSMStatePrint:
+		return errors.New("end code block reached outside a code block")
+	case luatreeFSMStateCode:
+		fmt.Fprintf(fsm.sc, " -- CodeBlock\n")
+		fsm.state = luatreeFSMStateChar
+	default:
+		return errors.New("invalid state")
+	}
+
+	return nil
+}
+
+func (fsm *luatreeFSM) processStartPrint(nodeId uint32, node *xmltree.Node) error {
+	switch fsm.state {
+	case luatreeFSMStateCode, luatreeFSMStatePrint:
+		return errors.New("start print block reached from inside a print or code block")
+	case luatreeFSMStateChar:
+		fmt.Fprintf(fsm.sc, "%sPrint(", fsm.curIndent)
+		fsm.state = luatreeFSMStatePrint
+	default:
+		return errors.New("invalid state")
+	}
+
+	return nil
+}
+
+func (fsm *luatreeFSM) processEndPrint(nodeId uint32, node *xmltree.Node) error {
+	switch fsm.state {
+	case luatreeFSMStateChar, luatreeFSMStateCode:
+		return errors.New("end print block reached outside a code block")
+	case luatreeFSMStatePrint:
+		fmt.Fprintf(fsm.sc, ") -- PrintBlock\n")
+		fsm.state = luatreeFSMStateChar
+	default:
+		return errors.New("invalid state")
+	}
 
 	return nil
 }
 
 func (fsm *luatreeFSM) processNonstructuringElement(nodeId uint32, node *xmltree.Node) error {
-	// TODO: Check we came from a valid state
-	fmt.Fprintf(&fsm.sc, "%sSetToken(%d) -- Type: %T\n", fsm.indent, nodeId, node)
+	switch fsm.state {
+	case luatreeFSMStateCode, luatreeFSMStatePrint:
+		return errors.New("special element block reached inside a code or print block") // TODO: Do inhibition!
+	case luatreeFSMStateChar:
+		fmt.Fprintf(fsm.sc, "%sSetToken(%d) -- Type: %T\n", fsm.curIndent, nodeId, node.Token)
+	default:
+		return errors.New("invalid state")
+	}
 	return nil
-}
-
-// handleCharData implements the block tokenizer that keeps track in which context
-// the xml.CharData is and emits the according commands for the lua program.
-func handleCharData(lt *LuaTree, state blockTokenizerState, sc io.Writer, indent string, nodeId uint32, node *xmltree.Node) (blockTokenizerState, error) {
-	d := node.Token.(xml.CharData)
-
-	toks := codeBlockTokenizer(string(d))
-
-	// We got a CharData that has no blocks inside and are also in a chardata state.
-	// Therefor we emit the token as is.
-	if state == blockTokenizerCharBlock && len(toks) == 1 && !isToken(toks[0]) {
-		fmt.Fprintf(sc, "%sSetToken(%d) --  %s\n", indent, nodeId, sanitizeComment(string(d)))
-		return state, nil
-	}
-
-	for i := range toks {
-		switch {
-		case state == blockTokenizerCharBlock && !isToken(toks[i]):
-			// Add new CharData node according to original one and set the data to toks[i]
-			if toks[i] != "" {
-				newNode := &xmltree.Node{
-					Token:  xml.CharData(toks[i]),
-					Parent: node.Parent,
-				}
-				newNodeId := lt.RegisterNode(newNode)
-				fmt.Fprintf(sc, "%sCharData(%d) --  %s\n", indent, newNodeId, sanitizeComment(string(toks[i])))
-			}
-		case state == blockTokenizerCharBlock && toks[i] == string(BlockTokenStartCode):
-			state = blockTokenizerCodeBlock
-		case state == blockTokenizerCharBlock && toks[i] == string(BlockTokenStartPrint):
-			state = blockTokenizerPrintBlock
-		case state == blockTokenizerCodeBlock && toks[i] == string(BlockTokenEndCode):
-			state = blockTokenizerCharBlock
-		case state == blockTokenizerPrintBlock && toks[i] == string(BlockTokenEndPrint):
-			state = blockTokenizerCharBlock
-		case state == blockTokenizerCodeBlock && !isToken(toks[i]):
-			fmt.Fprintf(sc, "%s%s -- CodeBlock\n", indent, toks[i])
-		case state == blockTokenizerPrintBlock && !isToken(toks[i]):
-			fmt.Fprintf(sc, "%sPrint(%s) -- PrintBlock\n", indent, toks[i])
-		default:
-			return blockTokenizerInvalid, fmt.Errorf("invalid token %q in tokenizer state %d", toks[i], state)
-		}
-	}
-
-	return state, nil
 }
 
 // sanitizeComment returns a string that is suitable for a comment in the lua program.

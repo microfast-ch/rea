@@ -1,44 +1,51 @@
 # rea
-document renderer using OpenDocument templates
+Rea is a document renderer that makes your document generation easy.
+It can process [ODF](https://www.libreoffice.org/discover/what-is-opendocument/)
+and [OOXML](https://support.microsoft.com/en-gb/office/open-xml-formats-and-file-name-extensions-5200d93c-3449-4380-8e11-31ef14555b18) files
+and uses [Lua](https://www.lua.org/) as the templating language.
 
-## Notes
-### Zipping OpenDocuments
-```bash
-zip -0 Basic2.ott mimetype
-zip -0 -r -u Basic2.ott *
-unzip -lv Basic2.ott
-libreoffice Basic2.ott
-```
+## Usage
+Rea has two main functions:
 
-### CLI Design
+- Templating: Filling out a document or template with data
+- Rendering: Converting a document to a archivable format (e.g. PDF)
+
+Usually you will have a template document that contains instructions on how data
+is connected to the document structure. During the `template`-step you will bring
+these two parts together to have a filled out document. This document you can
+further edit or use the `render`-step to create a PDF from it.
+
+### Templating
+Rea uses Lua as it's templating language. This allows you to have a well known,
+simple and convenient yet powerful processing engine.
+
+It works by having your (template) document as is but introducing two text blocks
+that have a special function:
+
+- `[[ foo ]]`: This is a code block, everything between `[[` and `]]` is interpreted as lua code
+- `[# bar #]`: This is a print block, everything between `[#` and `#]` is printed out into the document. It's a shorthand for calling `Print(bar)` in a code block.
+
+Let's take this example document:
+TODO: Picture of a document
+
+Here you see that we are using ... TODO: Explaination and picture of result
+
+#### Creating a template
+TODO:
+- Lua introduction and examples
+
+#### Generate templated document
 ```plaintext
-# Simple human CLI usage
-rea template -t template.ott -i data.yaml -o document.odt
-rea render -t template.ott -i data.yaml -o document.pdf
+Process a template document to generate a filled out document
 
-# Advanced usage
-rea render -f job.yaml
-```
+Usage:
+  rea template [flags]
 
-Shorthands:
-- `-d`: Debug bundle file?
-- `-b`: Bundle file?
-
-## Bundle file
-Contents:
-- Job file
-- LuaProg
-- Input Document
-- Input Data
-- XML Tree
-- Version
-
-## Data file
-```
-apiVersion: v1alpha1
-kind: RenderJob
-metadata:
-  name: render-job-deadbeef
-spec:
-  templateFile: template.ott
+Flags:
+  -b, --bundle string     tar file to which the job bundle should be written
+  -d, --debug             write debug information to job bundle
+  -h, --help              help for template
+  -i, --input string      data file (default "data.yaml")
+  -o, --output string     output document (default "document.odt")
+  -t, --template string   template document (default "template.ott"
 ```

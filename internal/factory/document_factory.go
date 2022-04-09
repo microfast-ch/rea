@@ -17,7 +17,7 @@ var errUnsupportedFileExtension = errors.New("unsupported file extension")
 // the file extension, but also the MIME type of the file.
 func NewFromFile(path string) (document.PackagedDocument, error) {
 	switch ext := filepath.Ext(path); ext {
-	case ".odt", "ott":
+	case ".odt", ".ott":
 		return odf.NewFromFile(path)
 	case ".docx":
 		return ooxml.NewFromFile(path)

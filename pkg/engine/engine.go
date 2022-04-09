@@ -199,7 +199,7 @@ func (e *LuaEngine) iPrint(state *lua.State) int {
 }
 
 // On each node this function is called. It checks if the new node has the same
-// parent as the previous one. If not, it determines the common root and closes
+// parent as the previous one. If not, it determines the common parent and closes
 // the tags parent tags up to it on the old branch. Then it opens all start tags of the new
 // branch so the new tag can be added.
 // This needs to be called before the node is added to the path.

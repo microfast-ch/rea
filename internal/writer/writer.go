@@ -1,4 +1,4 @@
-package template
+package writer
 
 import (
 	"fmt"
@@ -6,14 +6,14 @@ import (
 	"io/ioutil"
 	"strings"
 
-	"github.com/djboris9/rea/internal/odf"
+	"github.com/djboris9/rea/pkg/document"
 	"github.com/djboris9/rea/pkg/engine"
 	"github.com/djboris9/rea/pkg/xmltree"
 )
 
-// TemplateODT takes a text or text-template ODF file, templates it with the given
+// Write takes a text or text-template file, processed it with the given
 // configuration and writes the result to the writer.
-func TemplateODT(tmpl *odf.ODF, config *TemplateConfig, out io.Writer) (*TemplateProcessingData, error) {
+func Write(tmpl document.PackagedDocument, config *TemplateConfig, out io.Writer) (*TemplateProcessingData, error) {
 	tpd := &TemplateProcessingData{
 		TemplateMimeType: tmpl.MIMEType(),
 	}
@@ -67,11 +67,11 @@ func TemplateODT(tmpl *odf.ODF, config *TemplateConfig, out io.Writer) (*Templat
 
 	// Write file, overriding mimetype and content.xml
 	// TODO: Override/Delete thumbnail and remove it from the manifest.xml
-	ov := odf.Overrides{
-		"mimetype": odf.Override{
+	ov := document.Overrides{
+		"mimetype": document.Override{
 			Data: []byte("application/vnd.oasis.opendocument.text"),
 		},
-		"content.xml": odf.Override{
+		"content.xml": document.Override{
 			Data: []byte(content),
 		},
 	}

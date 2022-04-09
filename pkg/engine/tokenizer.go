@@ -10,16 +10,6 @@ const (
 	BlockTokenEndPrint   BlockToken = "#]" // Ends a printing block
 )
 
-// blockTokenizerState represents the context in which the block tokenizer is.
-type blockTokenizerState int
-
-const (
-	blockTokenizerInvalid    blockTokenizerState = iota // We got an error
-	blockTokenizerCharBlock  blockTokenizerState = iota // We are in a char data context
-	blockTokenizerCodeBlock  blockTokenizerState = iota // We are in a code context
-	blockTokenizerPrintBlock blockTokenizerState = iota // We are in a printing context
-)
-
 // isToken checks if the given token is a non char data token.
 func isToken(s string) bool {
 	if len(s) != 2 {
@@ -39,7 +29,6 @@ func isToken(s string) bool {
 // codeBlockTokenizer splits the string d into strings with the tokens inside.
 // Tokens are expected to be 2 chars long. The resulting slice contains at least one element.
 // TODO: Add fuzzer
-// TODO: Use strings.Cut from Go 1.18
 func codeBlockTokenizer(d string) []string {
 	ret := []string{}
 

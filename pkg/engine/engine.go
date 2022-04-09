@@ -306,39 +306,3 @@ func reverseNodes(nodes []*xmltree.Node) {
 		nodes[i], nodes[j] = nodes[j], nodes[i]
 	}
 }
-
-/*
-
-StartNode(p1)
- StartNode(p2)
-    EndNode(p4) -- We end a non started node. So we start all parents until we have a balance?
-   EndNode(p3)
-  EndNode(p2)
- EndNode(p1)
-
-## Loop higher case
-StartNode(p1)
- StartNode(p2) -- loop target
-  for A={1..2}
-  StartNode(p3)
-   Print(A)
-   StartNode(p4)
-    endfor
-    EndNode(p4)
-   EndNode(p3)
-  EndNode(p2)
- EndNode(p1)
-
-StartNode(p1)
- StartNode(p2) -- Loop target
-  StartNode(p3)
-   Print(A)
-   StartNode(p4)
-  StartNode(p3) -- visited 2nd time. So we insert each parent as StartNode til the loop target
-   Print(A)
-   StartNode(p4)
-    EndNode(p4)
-   EndNode(p3)
-  EndNode(p2)
- EndNode(p1)
-*/

@@ -257,11 +257,13 @@ func (fsm *luatreeFSM) processEndPrint(nodeId uint32, node *xmltree.Node) error 
 }
 
 func (fsm *luatreeFSM) processNonstructuringElement(nodeId uint32, node *xmltree.Node) error {
+	tag := fmt.Sprintf("%sSetToken(%d) -- Type: %T", fsm.curIndent, nodeId, node.Token)
+
 	switch fsm.state {
 	case luatreeFSMStateCode, luatreeFSMStatePrint:
-		return errors.New("special element block reached inside a code or print block") // TODO: Do inhibition!
+		fsm.inhibition = append(fsm.inhibition, fmt.Sprintf("%s (inhibited)\n", tag))
 	case luatreeFSMStateChar:
-		fmt.Fprintf(fsm.sc, "%sSetToken(%d) -- Type: %T\n", fsm.curIndent, nodeId, node.Token)
+		fmt.Fprintf(fsm.sc, "%s\n", tag)
 	default:
 		return errors.New("invalid state")
 	}

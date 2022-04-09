@@ -530,3 +530,76 @@ func TestRenderFragmentInCodeDirective(t *testing.T) {
 		t.Log(e.lt.LuaProg)
 	}
 }
+
+func TestRenderUnbalancedParentStacks(t *testing.T) {
+	testdata := xml.Header + `
+<text>
+  <p>[[ for i=1,<span>2</span> do ]]</p>
+  <i>[# i #][[ end ]]</i>
+</text>`
+
+	wantXML := xml.Header + `
+<text>
+  <p><span></span></p>
+  <i>1</i><p><span></span></p>
+  <i>2</i>
+</text>`
+	/*
+	   SetToken(1) -- Type: xml.ProcInst
+	   SetToken(2) --  "\n\n"
+	   StartNode(3) --  text
+	    SetToken(4) --  "\n  "
+	    StartNode(5) --  p
+	      for i=1,2 do  -- CodeBlock
+	     StartNode(7) --  span (inhibited)
+	      EndNode(9) --  span (inhibited)
+	     EndNode(11) --  p
+	    SetToken(12) --  "\n  "
+	    StartNode(13) --  i
+	     Print( i ) -- PrintBlock
+	      end  -- CodeBlock
+	     EndNode(15) --  i
+	    SetToken(16) --  "\n"
+	    EndNode(17) --  text
+	*/
+
+	e, err := prepareLua(t, testdata)
+	if err != nil {
+		t.Error(err)
+	}
+
+	want := []string{
+		"SetToken(1)",             // XML Header
+		"SetToken(2)",             // Spaces
+		"StartNode(3)",            // <text>
+		"SetToken(4)",             // Spaces
+		"StartNode(5)",            // <p>
+		"StartNode(7)",            // <span>
+		"EndNode(9)",              // </span>
+		"EndNode(11)",             // </p>
+		"SetToken(12)",            // Spaces
+		"StartNode(13)",           //<i>
+		"Print(???)",              // "1"
+		"EndNode(i) - balanced",   // </i>
+		"StartNode(p) - balanced", // <p>
+		"StartNode(7)",            // <span>
+		"EndNode(9)",              // </span>
+		"EndNode(11)",             // </p>
+		"SetToken(12)",            // Spaces
+		"StartNode(13)",           // <i>
+		"Print(???)",              // "2"
+		"EndNode(15)",             // </i>
+		"SetToken(16)",            // Spaces
+		"EndNode(17)",             // </text>
+	}
+
+	if diff := cmp.Diff(want, e.nodePathStr); diff != "" {
+		t.Errorf("nodePathStr mismatch (-want +got):\n%s", diff)
+		t.Log(e.lt.LuaProg)
+	}
+
+	if diff := cmp.Diff(wantXML, serializeNodePath(t, e.nodePath)); diff != "" {
+		t.Errorf("nodePath as XML mismatch (-want +got):\n%s", diff)
+		t.Log(e.lt.LuaProg)
+	}
+}

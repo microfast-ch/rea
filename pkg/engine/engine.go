@@ -203,7 +203,6 @@ func (e *LuaEngine) iPrint(state *lua.State) int {
 // the tags parent tags up to it on the old branch. Then it opens all start tags of the new
 // branch so the new tag can be added.
 // This needs to be called before the node is added to the path.
-// TODO: Handle StartNode and EndNodes correctly for the tree
 func (e *LuaEngine) fillTree(newNode *xmltree.Node) {
 	// We are the root or are somehow detached. No balancing possible.
 	if newNode.Parent == nil || len(e.parentStack) == 0 {
@@ -233,7 +232,7 @@ func (e *LuaEngine) fillTree(newNode *xmltree.Node) {
 
 	// Okk, now we have to work. The stack doesn't match the stack the newNode
 	// expected.
-	// TODO
+
 	// 1. Get trees to the common parent
 	leftTree, _, rightTree := getCommonPaths(newNode, e.parentStack)
 
@@ -247,19 +246,19 @@ func (e *LuaEngine) fillTree(newNode *xmltree.Node) {
 		})
 		e.nodePathStr = append(e.nodePathStr, fmt.Sprintf("EndNode(%s) - balanced", elem.Name.Local))
 		tmpParent = rightTree[i].Parent
+
+		// Remove one level from the parent stack to keep the parent stack up to date
+		e.parentStack = e.parentStack[:len(e.parentStack)-1]
 	}
 
 	// 3. Add all StartNodes for the newNode stack till the root (leftTree)
 	e.nodePath = append(e.nodePath, leftTree...)
 	for i := range leftTree {
 		e.nodePathStr = append(e.nodePathStr, fmt.Sprintf("StartNode(%s) - balanced", leftTree[i].Token.(xml.StartElement).Name.Local))
-	}
 
-	// 4. TODO:
-	// - How to (and if to) duplicate nodes that occure multiple times to have independent objects
-	// - Verify parents are consistent
-	//fmt.Printf("node: %T %v\n", newNode.Token, newNode.Token)
-	//fmt.Printf("Propable missbalance at: \n\tstack:%v\n\t%v\n", e.parentStack, e.nodePathStr)
+		// Add node to the parent stack to keep the parent stack up to date
+		e.parentStack = append(e.parentStack, leftTree[i])
+	}
 }
 
 // getCommonPath returns the first node (from botton) that has the given node

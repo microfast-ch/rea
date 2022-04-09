@@ -586,52 +586,56 @@ func TestRenderUnbalancedParentStacks(t *testing.T) {
 	}
 }
 
-func TestRenderUnbalancedUnknownIssue(t *testing.T) {
+func TestRenderUnbalancedMultipleLevels(t *testing.T) {
 	testdata := xml.Header + `
-  <body>
-      <p>[[ bag = {apple=3, banana=5, lemon=1}<span> </span>]]</p>
-      <p>[[ for fruit, num in <span>pairs(bag)</span> do ]]</p>
-      <list xml:id="list3891063543" text:style-name="L1">
-            <span>[# num .. "x " .. </span>
-            <span>fruit #][[ end ]]</span>
-      </list>
-  </body>`
+<body>
+  <p>[[ for i=1,2 do ]]</p>
+  <list>
+    <span>[# i #][[ end ]]</span>
+  </list>
+</body>`
 
 	wantXML := xml.Header + `
-<text>
-  <p><span></span></p>
-  <i>1</i><p><span></span></p>
-  <i>2</i>
-</text>` // TODO
+<body>
+  <p></p>
+  <list>
+    <span>1</span></list><p></p>
+  <list>
+    <span>2</span>
+  </list>
+</body>`
 
 	e, err := prepareLua(t, testdata)
 	if err != nil {
 		t.Error(err)
 	}
 
-	want := []string{ // TODO
-		"SetToken(1)",             // XML Header
-		"SetToken(2)",             // Spaces
-		"StartNode(3)",            // <text>
-		"SetToken(4)",             // Spaces
-		"StartNode(5)",            // <p>
-		"StartNode(7)",            // <span>
-		"EndNode(9)",              // </span>
-		"EndNode(11)",             // </p>
-		"SetToken(12)",            // Spaces
-		"StartNode(13)",           //<i>
-		"Print(???)",              // "1"
-		"EndNode(i) - balanced",   // </i>
-		"StartNode(p) - balanced", // <p>
-		"StartNode(7)",            // <span>
-		"EndNode(9)",              // </span>
-		"EndNode(11)",             // </p>
-		"SetToken(12)",            // Spaces
-		"StartNode(13)",           // <i>
-		"Print(???)",              // "2"
-		"EndNode(15)",             // </i>
-		"SetToken(16)",            // Spaces
-		"EndNode(17)",             // </text>
+	want := []string{
+		"SetToken(1)",              // XML Header
+		"SetToken(2)",              // Spaces
+		"StartNode(3)",             // <body>
+		"SetToken(4)",              // Spaces
+		"StartNode(5)",             // <p>
+		"EndNode(7)",               // </p>
+		"SetToken(8)",              // Spaces
+		"StartNode(9)",             // <list>
+		"SetToken(10)",             // Spaces
+		"StartNode(11)",            // <span>
+		"Print(???)",               // "1"
+		"EndNode(span) - balanced", // </span>
+		"EndNode(list) - balanced", // </list>
+		"StartNode(p) - balanced",  // <p>
+		"EndNode(7)",               // </p>
+		"SetToken(8)",              // Spaces
+		"StartNode(9)",             // <list>
+		"SetToken(10)",             // Spaces
+		"StartNode(11)",            // <span>
+		"Print(???)",               // "2"
+		"EndNode(13)",              // </span>
+		"SetToken(14)",             // Spaces
+		"EndNode(15)",              // </list>
+		"SetToken(16)",             // Spaces
+		"EndNode(17)",              // </body>
 	}
 
 	if diff := cmp.Diff(want, e.nodePathStr); diff != "" {

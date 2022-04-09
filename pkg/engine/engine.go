@@ -252,9 +252,11 @@ func (e *LuaEngine) fillTree(newNode *xmltree.Node) {
 	// 1. Get trees to the common parent
 	leftTree, _, rightTree := getCommonPaths(newNode, e.parentStack)
 
-	// 2. Add all EndNodes from the current stack till the root (rightTree)
+	// 2. Add all EndNodes from the current stack till the root (rightTree) in reverse order
 	tmpParent := lastStack
-	for i := range rightTree {
+	for revIdx := range rightTree {
+		i := len(rightTree) - revIdx - 1
+
 		elem := rightTree[i].Token.(xml.StartElement).End()
 		e.nodePath = append(e.nodePath, &xmltree.Node{
 			Token:  elem,

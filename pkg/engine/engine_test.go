@@ -449,7 +449,7 @@ func TestRenderFragmentInCodeBlock(t *testing.T) {
 	wantXML := xml.Header + `
 <article>
   <p1></p1>
-  <p2>Print</p2>
+  <p2><span></span>Print</p2>
 </article>`
 
 	e, err := prepareLua(t, testdata)
@@ -466,6 +466,8 @@ func TestRenderFragmentInCodeBlock(t *testing.T) {
 		"EndNode(12)",   // </p1>
 		"SetToken(13)",  // Spaces
 		"StartNode(14)", // <p2>
+		"StartNode(16)", // <span>
+		"EndNode(18)",   // </span>
 		"CharData(20)",  // "Print"
 		"EndNode(21)",   // </p2>
 		"SetToken(22)",  // Spaces
@@ -510,6 +512,8 @@ func TestRenderFragmentInCodeDirective(t *testing.T) {
 		"EndNode(12)",   // </p1>
 		"SetToken(13)",  // Spaces
 		"StartNode(14)", // <p2>
+		"StartNode(16)", // <span>
+		"EndNode(18)",   // </span>
 		"CharData(20)",  // "Print"
 		"EndNode(21)",   // </p2>
 		"SetToken(22)",  // Spaces

@@ -140,8 +140,16 @@ func (fsm *luatreeFSM) processStartElement(nodeId uint32, node *xmltree.Node) er
 		return errors.New("supplied wrong type for node")
 	}
 
-	fmt.Fprintf(fsm.sc, "%sStartNode(%d) --  %v\n", fsm.curIndent, nodeId, element.Name.Local)
-	// TODO: Inhibition
+	tag := fmt.Sprintf("%sStartNode(%d) --  %v", fsm.curIndent, nodeId, element.Name.Local)
+
+	switch fsm.state {
+	case luatreeFSMStateCode, luatreeFSMStatePrint:
+		// Inhibit elements if we are in a code or print state
+		fsm.inhibition = append(fsm.inhibition, fmt.Sprintf("%s (inhibited)\n", tag))
+	case luatreeFSMStateChar:
+		fmt.Fprintf(fsm.sc, "%s\n", tag)
+	}
+
 	return nil
 }
 
@@ -151,8 +159,16 @@ func (fsm *luatreeFSM) processEndElement(nodeId uint32, node *xmltree.Node) erro
 		return errors.New("supplied wrong type for node")
 	}
 
-	fmt.Fprintf(fsm.sc, "%sEndNode(%d) --  %v\n", fsm.curIndent, nodeId, element.Name.Local)
-	// TODO: Inhibition
+	tag := fmt.Sprintf("%sEndNode(%d) --  %v", fsm.curIndent, nodeId, element.Name.Local)
+
+	switch fsm.state {
+	case luatreeFSMStateCode, luatreeFSMStatePrint:
+		// Inhibit elements if we are in a code or print state
+		fsm.inhibition = append(fsm.inhibition, fmt.Sprintf("%s (inhibited)\n", tag))
+	case luatreeFSMStateChar:
+		fmt.Fprintf(fsm.sc, "%s\n", tag)
+	}
+
 	return nil
 }
 
@@ -162,9 +178,6 @@ func (fsm *luatreeFSM) processChar(nodeId uint32, node *xmltree.Node, curToken s
 		// If we are in a code or print context, we print the parts directly
 		// as the envelope is handled in the according start and end blocks
 		fmt.Fprintf(fsm.sc, "%s", curToken)
-	//case luatreeFSMStatePrint:
-	// If we are in a print context, we print the code directly
-	//		fmt.Fprintf(fsm.sc, "%sPrint(%s) -- PrintBlock\n", fsm.curIndent, curToken)
 	case luatreeFSMStateChar:
 		if singleToken {
 			// Use `SetToken` instead of `CharData` if we have are in a xml.CharData without other tokens
@@ -205,6 +218,7 @@ func (fsm *luatreeFSM) processEndCode(nodeId uint32, node *xmltree.Node) error {
 		return errors.New("end code block reached outside a code block")
 	case luatreeFSMStateCode:
 		fmt.Fprintf(fsm.sc, " -- CodeBlock\n")
+		fsm.printInhibition()
 		fsm.state = luatreeFSMStateChar
 	default:
 		return errors.New("invalid state")
@@ -233,6 +247,7 @@ func (fsm *luatreeFSM) processEndPrint(nodeId uint32, node *xmltree.Node) error 
 		return errors.New("end print block reached outside a code block")
 	case luatreeFSMStatePrint:
 		fmt.Fprintf(fsm.sc, ") -- PrintBlock\n")
+		fsm.printInhibition()
 		fsm.state = luatreeFSMStateChar
 	default:
 		return errors.New("invalid state")
@@ -251,6 +266,13 @@ func (fsm *luatreeFSM) processNonstructuringElement(nodeId uint32, node *xmltree
 		return errors.New("invalid state")
 	}
 	return nil
+}
+
+func (fsm *luatreeFSM) printInhibition() {
+	if len(fsm.inhibition) != 0 {
+		fmt.Fprintf(fsm.sc, "%s", strings.Join(fsm.inhibition, ""))
+		fsm.inhibition = []string{}
+	}
 }
 
 // sanitizeComment returns a string that is suitable for a comment in the lua program.

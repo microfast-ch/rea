@@ -6,8 +6,8 @@ import (
 	"io/ioutil"
 	"strings"
 
+	"github.com/djboris9/rea/internal/odf"
 	"github.com/djboris9/rea/pkg/engine"
-	"github.com/djboris9/rea/pkg/odf"
 	"github.com/djboris9/rea/pkg/xmltree"
 )
 

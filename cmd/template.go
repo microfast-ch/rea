@@ -5,8 +5,8 @@ import (
 	"log"
 	"os"
 
+	"github.com/djboris9/rea/internal/odf"
 	"github.com/djboris9/rea/pkg/bundle"
-	"github.com/djboris9/rea/pkg/odf"
 	"github.com/djboris9/rea/pkg/template"
 	"github.com/spf13/cobra"
 )

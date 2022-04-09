@@ -34,6 +34,29 @@ Here you see that we are using ... TODO: Explaination and picture of result
 TODO:
 - Lua introduction and examples
 
+#### Passing data to the document
+You can pass data to the template by having an input file as yaml. It should contain
+two top level keys `data` and `metadata`, where you are free to define your data structure.
+The `metadata` key is special as it will be used to set the documents metadata like author.
+
+Example:
+```yaml
+metadata:
+  author: "John Doe"
+data:
+  customer:
+    firstname: "Sue"
+    lastname: "Chang"
+  items:
+  - Apple
+  - Banana
+  - Lemon
+  greeting: "Hello Sue!"
+```
+
+The fields from `data` can be accessed directly in your document (e.g. `[# customer.firstname #]`)
+whereas `metadata` values needs to be accessed through the `metadata`-prefix (e.g. `[# metadata.author #]`).
+
 #### Generate templated document
 ```plaintext
 Process a template document to generate a filled out document

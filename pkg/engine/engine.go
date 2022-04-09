@@ -24,7 +24,13 @@ type LuaEngine struct {
 	nodePathStr []string
 }
 
-func NewLuaEngine(lt *LuaTree, data map[string]any) *LuaEngine {
+// Passed data must be a primitive or a map
+type TemplateData struct {
+	Data     map[string]any
+	Metadata map[string]string
+}
+
+func NewLuaEngine(lt *LuaTree, data *TemplateData) *LuaEngine {
 	// Initialize lua
 	l := lua.NewState()
 	//lua.BaseOpen(l)
@@ -41,8 +47,20 @@ func NewLuaEngine(lt *LuaTree, data map[string]any) *LuaEngine {
 	l.Register("CharData", e.iCharData)
 	l.Register("Print", e.iPrint)
 
-	goluagoUtil.DeepPush(l, data)
-	l.SetGlobal("data")
+	// Inject data into the lua stack
+	if data != nil {
+		if data.Data != nil {
+			for k, v := range data.Data {
+				goluagoUtil.DeepPush(l, v)
+				l.SetGlobal(k)
+			}
+		}
+
+		if data.Metadata != nil {
+			goluagoUtil.DeepPush(l, data)
+			l.SetGlobal("metadata")
+		}
+	}
 
 	// Restricted base library
 	l.Register("tostring", baseToString) // Required for Print

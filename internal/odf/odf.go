@@ -18,6 +18,7 @@ type Odf struct {
 }
 
 // NewFromFile returns a new ODF instance for the given document file path.
+// The file is validated to be a valid ODF package but no content or structure is processed.
 func NewFromFile(path string) (*Odf, error) {
 	template, err := document.NewFromFile(path)
 	if err != nil {
@@ -32,7 +33,7 @@ func NewFromFile(path string) (*Odf, error) {
 
 // NewTemplate returns an ODF instance for the given document with the given size.
 // The file is validated to be a valid ODF package but no content or structure is processed.
-func NewTemplate(doc io.ReaderAt, size int64) (*Odf, error) {
+func New(doc io.ReaderAt, size int64) (*Odf, error) {
 	template, err := document.NewTemplate(doc, size)
 	if err != nil {
 		return nil, err
@@ -49,7 +50,11 @@ func (o *Odf) MIMEType() string {
 }
 
 func (o *Odf) Open(name string) (fs.File, error) {
-	return o.Open(name)
+	return o.template.Open(name)
+}
+
+func (o *Odf) Close() error {
+	return o.template.Close()
 }
 
 // https://docs.oasis-open.org/office/OpenDocument/v1.3/os/part2-packages/OpenDocument-v1.3-os-part2-packages.pdf

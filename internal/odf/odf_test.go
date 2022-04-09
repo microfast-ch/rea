@@ -5,6 +5,7 @@ import (
 	"io/ioutil"
 	"testing"
 
+	"github.com/djboris9/rea/pkg/document"
 	"github.com/stretchr/testify/require"
 )
 
@@ -24,7 +25,7 @@ func TestNew(t *testing.T) {
 	require.Nil(t, err)
 
 	// Test invalid file
-	testdata, err = ioutil.ReadFile("../../testdata/not_odf.docx")
+	testdata, err = ioutil.ReadFile("../../testdata/Basic1.docx")
 	require.Nil(t, err)
 
 	doc, err = New(bytes.NewReader(testdata), int64(len(testdata)))
@@ -41,7 +42,7 @@ func TestNewFromFile(t *testing.T) {
 	require.Nil(t, err)
 
 	// Test invalid file
-	doc, err = NewFromFile("../../testdata/not_odf.docx")
+	doc, err = NewFromFile("../../testdata/Basic1.docx")
 	require.Error(t, err)
 }
 
@@ -67,18 +68,18 @@ func TestWrite(t *testing.T) {
 
 	// Override mimetype file, delete content.xml and add new file
 	buf = new(bytes.Buffer)
-	ov := Overrides{
-		"mimetype": Override{
+	ov := document.Overrides{
+		"mimetype": document.Override{
 			Data: []byte("application/vnd.oasis.opendocument.text"),
 		},
-		"content.xml": Override{
+		"content.xml": document.Override{
 			Delete: true,
 		},
-		"extra.txt": Override{
+		"extra.txt": document.Override{
 			Data: []byte("my-extra-file"),
 		},
 	}
-	err = doc.Write(buf, ov)
+	_ = doc.Write(buf, ov)
 	doc.Close()
 
 	// Read document again and check overrides

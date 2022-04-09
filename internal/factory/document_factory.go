@@ -6,6 +6,7 @@ import (
 	"path/filepath"
 
 	"github.com/djboris9/rea/internal/odf"
+	"github.com/djboris9/rea/internal/ooxml"
 	"github.com/djboris9/rea/pkg/document"
 )
 
@@ -15,13 +16,12 @@ var errUnsupportedFileExtension = errors.New("unsupported file extension")
 // TODO: make this factory function smarter and not only check
 // the file extension, but also the MIME type of the file.
 func NewFromFile(path string) (document.PackagedDocument, error) {
-	fileExtension := filepath.Ext(path)
-	if fileExtension == ".odt" || fileExtension == ".ott" {
+	switch ext := filepath.Ext(path); ext {
+	case ".odt", "ott":
 		return odf.NewFromFile(path)
+	case ".docx":
+		return ooxml.NewFromFile(path)
+	default:
+		return nil, fmt.Errorf("%w : %s", errUnsupportedFileExtension, ext)
 	}
-	// if fileExtension == ".docx" {
-	// 	return ooxml.NewFromFile(path)
-	// }
-
-	return nil, fmt.Errorf("%w : %s", errUnsupportedFileExtension, fileExtension)
 }

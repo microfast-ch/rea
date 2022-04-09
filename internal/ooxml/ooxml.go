@@ -7,89 +7,63 @@ import (
 	"io/fs"
 	"io/ioutil"
 
+	"github.com/djboris9/rea/pkg/document"
 	"golang.org/x/exp/slices"
 )
 
 // ODF defines an OpenDocument file that is concurrently accessible.
 type OOXML struct {
-	zipFD       *zip.Reader
-	zipFDCloser io.Closer
-	mimetype    string
-}
-
-// MIMEType returns the mimetype of the loaded document.
-func (o *OOXML) MIMEType() string {
-	return o.mimetype
+	template *document.Template
 }
 
 // New returns an ooxml instance for the given document with the given size.
 // The file is validated to be a valid ooxml package but no content or structure is processed.
 func New(doc io.ReaderAt, size int64) (*OOXML, error) {
-	rdr, err := zip.NewReader(doc, size)
+	template, err := document.NewTemplate(doc, size)
 	if err != nil {
-		return nil, fmt.Errorf("creating OOXML reader: %w", err)
+		return nil, err
 	}
 
-	mimetype, err := validateArchive(rdr)
-	if err != nil {
-		return nil, fmt.Errorf("validating OOXML document: %w", err)
-	}
+	odf := &OOXML{template: template}
+	err = odf.ValidateAndSetMIMEType()
 
-	return &OOXML{
-		zipFD:    rdr,
-		mimetype: mimetype,
-	}, nil
+	return odf, err
 }
 
 // NewFromFile returns an OOXML instance for the given document file path.
 // The file is validated to be a valid OOXML package but no content or structure is processed.
-func NewFromFile(name string) (*OOXML, error) {
-	rc, err := zip.OpenReader(name)
+func NewFromFile(path string) (*OOXML, error) {
+	template, err := document.NewFromFile(path)
 	if err != nil {
-		return nil, fmt.Errorf("creating ODF reader: %w", err)
+		return nil, err
 	}
 
-	mimetype, err := validateArchive(&rc.Reader)
-	if err != nil {
-		return nil, fmt.Errorf("validating ODF document: %w", err)
-	}
+	odf := &OOXML{template: template}
+	err = odf.ValidateAndSetMIMEType()
 
-	return &OOXML{
-		zipFD:       &rc.Reader,
-		zipFDCloser: rc,
-		mimetype:    mimetype,
-	}, nil
+	return odf, err
+}
+
+func (o *OOXML) MIMEType() string {
+	return o.template.MIMEType()
 }
 
 // Opens the given file as fs.File
 func (o *OOXML) Open(name string) (fs.File, error) {
-	return o.zipFD.Open(name)
+	return o.template.Open(name)
 }
 
 // Close needs to be called at the end of the document processing to release any
 // allocated resources.
 func (o *OOXML) Close() error {
-	if o.zipFDCloser != nil {
-		return o.zipFDCloser.Close()
-	}
-
-	return nil
-}
-
-// Overrides defines an override identified by the file path as map key.
-type Overrides map[string]Override
-
-// Override represents a content override for a file.
-type Override struct {
-	Data   []byte // File contents to write
-	Delete bool   // Do not write file with the given path to the package
+	return o.template.Close()
 }
 
 // Writes an OOXML package to the given writer. It will use the loaded OOXML contents
 // as base and incorporate the overrides.
-func (o *OOXML) Write(w io.Writer, ov Overrides) error {
+func (o *OOXML) Write(w io.Writer, ov document.Overrides) error {
 	if ov == nil {
-		ov = Overrides{}
+		ov = document.Overrides{}
 	}
 
 	fd := zip.NewWriter(w)
@@ -118,7 +92,7 @@ func (o *OOXML) Write(w io.Writer, ov Overrides) error {
 	}
 
 	// Write other files from loaded ODF that are not already defined in writtenFiles to skip
-	for _, v := range o.zipFD.File {
+	for _, v := range o.template.GetZipFiles() {
 		// Skip already written files (or just skipped/deleted files)
 		if slices.Contains(writtenFiles, v.Name) {
 			continue
@@ -157,22 +131,24 @@ func (o *OOXML) Write(w io.Writer, ov Overrides) error {
 }
 
 // http://officeopenxml.com/anatomyofOOXML.php
-func validateArchive(rdr *zip.Reader) (string, error) {
+func (o *OOXML) ValidateAndSetMIMEType() error {
 	// Every package must have a [Content_Types].xml, found at the root of the package.
 	// This file contains a list of all of the content types of the parts in the package.
 	// Every part and its type must be listed in [Content_Types].xml.
-	fd, err := rdr.Open("[Content_Types].xml")
+	fd, err := o.Open("[Content_Types].xml")
 	if err != nil {
-		return "", fmt.Errorf("opening [Content_Types].xml: %w", err)
+		return fmt.Errorf("opening [Content_Types].xml: %w", err)
 	}
 	defer fd.Close()
 
 	// Main Document: Contains the body of the document.
-	fd, err = rdr.Open("word/document.xml")
+	fd, err = o.Open("word/document.xml")
 	if err != nil {
-		return "", fmt.Errorf("Main Document: %w", err)
+		return fmt.Errorf("Main Document: %w", err)
 	}
 	defer fd.Close()
 
-	return MainDocumentContentType, nil
+	o.template.SetMIMEType(MainDocumentContentType)
+
+	return nil
 }

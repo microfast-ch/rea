@@ -5,6 +5,7 @@ import (
 	"io/ioutil"
 	"testing"
 
+	"github.com/djboris9/rea/pkg/document"
 	"github.com/stretchr/testify/require"
 )
 
@@ -12,7 +13,7 @@ func TestNew(t *testing.T) {
 	_, err := New(bytes.NewReader([]byte("")), 10)
 	require.Error(t, err)
 
-	testdata, err := ioutil.ReadFile("../../testdata/not_odf.docx")
+	testdata, err := ioutil.ReadFile("../../testdata/Basic1.docx")
 	require.Nil(t, err)
 
 	doc, err := New(bytes.NewReader(testdata), int64(len(testdata)))
@@ -32,7 +33,7 @@ func TestNew(t *testing.T) {
 }
 
 func TestNewFromFile(t *testing.T) {
-	doc, err := NewFromFile("../../testdata/not_odf.docx")
+	doc, err := NewFromFile("../../testdata/Basic1.docx")
 	require.Nil(t, err)
 
 	require.Equal(t, MainDocumentContentType, doc.MIMEType())
@@ -47,7 +48,7 @@ func TestNewFromFile(t *testing.T) {
 
 func TestWrite(t *testing.T) {
 	// Load valid file
-	doc, err := NewFromFile("../../testdata/not_odf.docx")
+	doc, err := NewFromFile("../../testdata/Basic1.docx")
 	require.Nil(t, err)
 
 	// Serialize same file, no overrides
@@ -67,8 +68,8 @@ func TestWrite(t *testing.T) {
 
 	// Override mimetype file, delete content.xml and add new file
 	buf = new(bytes.Buffer)
-	ov := Overrides{
-		"word/document.xml": Override{
+	ov := document.Overrides{
+		"word/document.xml": document.Override{
 			Data: []byte("my-extra-file"),
 		},
 	}

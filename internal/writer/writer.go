@@ -49,7 +49,7 @@ func Write(tmpl document.PackagedDocument, config *TemplateConfig, out io.Writer
 	tpd.TemplateLuaProg = lt.LuaProg
 	tpd.TemplateLuaNodeList = lt.NodeList
 
-	e := engine.NewLuaEngine(lt)
+	e := engine.NewLuaEngine(lt, nil)
 	err = e.Exec()
 	if err != nil {
 		return tpd, fmt.Errorf("executing lua engine: %w", err)

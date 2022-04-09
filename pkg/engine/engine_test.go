@@ -23,7 +23,7 @@ func prepareLua(t *testing.T, testdata string) (*LuaEngine, error) {
 		return nil, err
 	}
 
-	e := NewLuaEngine(lt)
+	e := NewLuaEngine(lt, nil)
 	err = e.Exec()
 	if err != nil {
 		t.Errorf("executing lua engine: %s", err)

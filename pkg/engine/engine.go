@@ -9,6 +9,8 @@ import (
 
 	"github.com/Shopify/go-lua"
 	"github.com/djboris9/rea/pkg/xmltree"
+
+	goluagoUtil "github.com/Shopify/goluago/util"
 )
 
 type LuaEngine struct {
@@ -22,10 +24,9 @@ type LuaEngine struct {
 	nodePathStr []string
 }
 
-func NewLuaEngine(lt *LuaTree) *LuaEngine {
+func NewLuaEngine(lt *LuaTree, data map[string]any) *LuaEngine {
 	// Initialize lua
 	l := lua.NewState()
-	//lua.OpenLibraries(l)
 	//lua.BaseOpen(l)
 
 	e := &LuaEngine{
@@ -39,6 +40,9 @@ func NewLuaEngine(lt *LuaTree) *LuaEngine {
 	l.Register("EndNode", e.iEndNode)
 	l.Register("CharData", e.iCharData)
 	l.Register("Print", e.iPrint)
+
+	goluagoUtil.DeepPush(l, data)
+	l.SetGlobal("data")
 
 	// Restricted base library
 	l.Register("tostring", baseToString) // Required for Print

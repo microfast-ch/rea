@@ -17,14 +17,31 @@ type Odf struct {
 	template *document.Template
 }
 
-// NewFromFile returns a new Odf instance for the given document file path.
+// NewFromFile returns a new ODF instance for the given document file path.
 func NewFromFile(path string) (*Odf, error) {
-	file, err := document.NewFromFile(path)
+	template, err := document.NewFromFile(path)
 	if err != nil {
 		return nil, err
 	}
 
-	return &Odf{template: file}, nil
+	odf := &Odf{template: template}
+	err = odf.ValidateAndSetMIMEType()
+
+	return odf, err
+}
+
+// NewTemplate returns an ODF instance for the given document with the given size.
+// The file is validated to be a valid ODF package but no content or structure is processed.
+func NewTemplate(doc io.ReaderAt, size int64) (*Odf, error) {
+	template, err := document.NewTemplate(doc, size)
+	if err != nil {
+		return nil, err
+	}
+
+	odf := &Odf{template: template}
+	err = odf.ValidateAndSetMIMEType()
+
+	return odf, err
 }
 
 func (o *Odf) MIMEType() string {
@@ -36,45 +53,48 @@ func (o *Odf) Open(name string) (fs.File, error) {
 }
 
 // https://docs.oasis-open.org/office/OpenDocument/v1.3/os/part2-packages/OpenDocument-v1.3-os-part2-packages.pdf
-// The file is validated to be a valid ODF package but no content or structure is processed.
-func (o *Odf) ValidateArchive() (string, error) {
+// The file is validated to be a valid ODF package and the MIME type is set accordingly.
+// No content or structure is processed.
+func (o *Odf) ValidateAndSetMIMEType() error {
 	// 3.2 Validate META-INF/manifest.xml
 	fd, err := o.Open("META-INF/manifest.xml")
 	if err != nil {
-		return "", fmt.Errorf("opening manifest.xml: %w", err)
+		return fmt.Errorf("opening manifest.xml: %w", err)
 	}
 	defer fd.Close()
 
 	manifestBytes, err := ioutil.ReadAll(fd)
 	if err != nil {
-		return "", fmt.Errorf("reading manifest.xml: %w", err)
+		return fmt.Errorf("reading manifest.xml: %w", err)
 	}
 
 	_, err = retypeManifest(manifestBytes, []byte("dummy"))
 	if err != nil {
-		return "", fmt.Errorf("validating manifest.xml: %w", err)
+		return fmt.Errorf("validating manifest.xml: %w", err)
 	}
 
 	// 3.3 Validate MIME type
 	fd, err = o.Open("mimetype")
 	if err != nil {
-		return "", fmt.Errorf("opening mimetype: %w", err)
+		return fmt.Errorf("opening mimetype: %w", err)
 	}
 	defer fd.Close()
 
 	mimetypeBytes, err := ioutil.ReadAll(fd)
 	if err != nil {
-		return "", fmt.Errorf("reading mimetype: %w", err)
+		return fmt.Errorf("reading mimetype: %w", err)
 	}
 
 	mimetype := string(mimetypeBytes)
 
 	// https://www.iana.org/assignments/media-types/media-types.xhtml
 	if !strings.HasPrefix(mimetype, "application/vnd.oasis.opendocument.") {
-		return "", fmt.Errorf("mimetype %q not known to be a OpenDocument file", mimetype)
+		return fmt.Errorf("mimetype %q not known to be a OpenDocument file", mimetype)
 	}
 
-	return mimetype, nil
+	o.template.SetMIMEType(mimetype)
+
+	return nil
 }
 
 // Writes an ODF package to the given writer. It will use the loaded ODF contents

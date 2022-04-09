@@ -10,7 +10,7 @@ import (
 type PackagedDocument interface {
 	MIMEType() string
 	Open(name string) (fs.File, error)
-	ValidateArchive() (string, error)
+	ValidateAndSetMIMEType() error
 	Write(w io.Writer, ov Overrides) error
 }
 
@@ -47,11 +47,6 @@ func NewTemplate(doc io.ReaderAt, size int64) (*Template, error) {
 		return nil, fmt.Errorf("creating ODF reader: %w", err)
 	}
 
-	// mimetype, err := validateArchive(rdr)
-	// if err != nil {
-	// 	return nil, fmt.Errorf("validating ODF document: %w", err)
-	// }
-
 	return &Template{
 		zipFD:    rdr,
 		mimetype: "",
@@ -75,6 +70,10 @@ func (o *Template) GetZipFiles() []*zip.File {
 
 func (o *Template) MIMEType() string {
 	return o.mimetype
+}
+
+func (o *Template) SetMIMEType(mimeType string) {
+	o.mimetype = mimeType
 }
 
 // Opens the given file as fs.File

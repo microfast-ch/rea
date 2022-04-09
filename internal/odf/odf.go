@@ -9,115 +9,104 @@ import (
 	"io/ioutil"
 	"strings"
 
+	"github.com/djboris9/rea/pkg/document"
 	"golang.org/x/exp/slices"
 )
 
-// ODF defines an OpenDocument file that is concurrently accessible.
-type ODF struct {
-	zipFD       *zip.Reader
-	zipFDCloser io.Closer
-	mimetype    string
+type Odf struct {
+	template *document.Template
 }
 
-// New returns an ODF instance for the given document with the given size.
+// NewFromFile returns a new ODF instance for the given document file path.
 // The file is validated to be a valid ODF package but no content or structure is processed.
-func New(doc io.ReaderAt, size int64) (*ODF, error) {
-	rdr, err := zip.NewReader(doc, size)
+func NewFromFile(path string) (*Odf, error) {
+	template, err := document.NewFromFile(path)
 	if err != nil {
-		return nil, fmt.Errorf("creating ODF reader: %w", err)
+		return nil, err
 	}
 
-	mimetype, err := validateArchive(rdr)
-	if err != nil {
-		return nil, fmt.Errorf("validating ODF document: %w", err)
-	}
+	odf := &Odf{template: template}
+	err = odf.ValidateAndSetMIMEType()
 
-	return &ODF{
-		zipFD:    rdr,
-		mimetype: mimetype,
-	}, nil
+	return odf, err
 }
 
-// NewFromFile returns an ODF instance for the given document file path.
+// NewTemplate returns an ODF instance for the given document with the given size.
 // The file is validated to be a valid ODF package but no content or structure is processed.
-func NewFromFile(name string) (*ODF, error) {
-	rc, err := zip.OpenReader(name)
+func New(doc io.ReaderAt, size int64) (*Odf, error) {
+	template, err := document.NewTemplate(doc, size)
 	if err != nil {
-		return nil, fmt.Errorf("creating ODF reader: %w", err)
+		return nil, err
 	}
 
-	mimetype, err := validateArchive(&rc.Reader)
-	if err != nil {
-		return nil, fmt.Errorf("validating ODF document: %w", err)
-	}
+	odf := &Odf{template: template}
+	err = odf.ValidateAndSetMIMEType()
 
-	return &ODF{
-		zipFD:       &rc.Reader,
-		zipFDCloser: rc,
-		mimetype:    mimetype,
-	}, nil
+	return odf, err
+}
+
+func (o *Odf) MIMEType() string {
+	return o.template.MIMEType()
+}
+
+func (o *Odf) Open(name string) (fs.File, error) {
+	return o.template.Open(name)
+}
+
+func (o *Odf) Close() error {
+	return o.template.Close()
 }
 
 // https://docs.oasis-open.org/office/OpenDocument/v1.3/os/part2-packages/OpenDocument-v1.3-os-part2-packages.pdf
-func validateArchive(rdr *zip.Reader) (string, error) {
+// The file is validated to be a valid ODF package and the MIME type is set accordingly.
+// No content or structure is processed.
+func (o *Odf) ValidateAndSetMIMEType() error {
 	// 3.2 Validate META-INF/manifest.xml
-	fd, err := rdr.Open("META-INF/manifest.xml")
+	fd, err := o.Open("META-INF/manifest.xml")
 	if err != nil {
-		return "", fmt.Errorf("opening manifest.xml: %w", err)
+		return fmt.Errorf("opening manifest.xml: %w", err)
 	}
 	defer fd.Close()
 
 	manifestBytes, err := ioutil.ReadAll(fd)
 	if err != nil {
-		return "", fmt.Errorf("reading manifest.xml: %w", err)
+		return fmt.Errorf("reading manifest.xml: %w", err)
 	}
 
 	_, err = retypeManifest(manifestBytes, []byte("dummy"))
 	if err != nil {
-		return "", fmt.Errorf("validating manifest.xml: %w", err)
+		return fmt.Errorf("validating manifest.xml: %w", err)
 	}
 
 	// 3.3 Validate MIME type
-	fd, err = rdr.Open("mimetype")
+	fd, err = o.Open("mimetype")
 	if err != nil {
-		return "", fmt.Errorf("opening mimetype: %w", err)
+		return fmt.Errorf("opening mimetype: %w", err)
 	}
 	defer fd.Close()
 
 	mimetypeBytes, err := ioutil.ReadAll(fd)
 	if err != nil {
-		return "", fmt.Errorf("reading mimetype: %w", err)
+		return fmt.Errorf("reading mimetype: %w", err)
 	}
 
 	mimetype := string(mimetypeBytes)
 
 	// https://www.iana.org/assignments/media-types/media-types.xhtml
 	if !strings.HasPrefix(mimetype, "application/vnd.oasis.opendocument.") {
-		return "", fmt.Errorf("mimetype %q not known to be a OpenDocument file", mimetype)
+		return fmt.Errorf("mimetype %q not known to be a OpenDocument file", mimetype)
 	}
 
-	return mimetype, nil
-}
+	o.template.SetMIMEType(mimetype)
 
-// MIMEType returns the mimetype of the loaded document.
-func (o *ODF) MIMEType() string {
-	return o.mimetype
-}
-
-// Overrides defines an override identified by the file path as map key.
-type Overrides map[string]Override
-
-// Override represents a content override for a file.
-type Override struct {
-	Data   []byte // File contents to write
-	Delete bool   // Do not write file with the given path to the package
+	return nil
 }
 
 // Writes an ODF package to the given writer. It will use the loaded ODF contents
 // as base and incorporate the overrides. It handles the mimetype and manifest.xml.
-func (o *ODF) Write(w io.Writer, ov Overrides) error {
+func (o *Odf) Write(w io.Writer, ov document.Overrides) error {
 	if ov == nil {
-		ov = Overrides{}
+		ov = document.Overrides{}
 	}
 
 	fd := zip.NewWriter(w)
@@ -131,7 +120,7 @@ func (o *ODF) Write(w io.Writer, ov Overrides) error {
 
 		mimetype = mimeTypeOverride.Data
 	} else {
-		mimetype = []byte(o.MIMEType())
+		mimetype = []byte(o.template.MIMEType())
 	}
 
 	f, err := fd.CreateHeader(&zip.FileHeader{
@@ -151,7 +140,7 @@ func (o *ODF) Write(w io.Writer, ov Overrides) error {
 	if v, ok := ov["META-INF/manifest.xml"]; ok && !v.Delete {
 		manifestBytes = v.Data
 	} else {
-		fd, err := o.zipFD.Open("META-INF/manifest.xml")
+		fd, err := o.template.Open("META-INF/manifest.xml")
 		if err != nil {
 			return fmt.Errorf("opening manifest.xml: %q", err)
 		}
@@ -168,7 +157,7 @@ func (o *ODF) Write(w io.Writer, ov Overrides) error {
 		return fmt.Errorf("retyping manifest.xml: %q", err)
 	}
 
-	ov["META-INF/manifest.xml"] = Override{
+	ov["META-INF/manifest.xml"] = document.Override{
 		Data: manifest,
 	}
 
@@ -200,8 +189,8 @@ func (o *ODF) Write(w io.Writer, ov Overrides) error {
 		}
 	}
 
-	// Write other files from loaded ODF that are not already defined in writtenFiles to skip
-	for _, v := range o.zipFD.File {
+	// Write other files from loaded template package that are not already defined in writtenFiles to skip
+	for _, v := range o.template.GetZipFiles() {
 		// Skip already written files (or just skipped/deleted files)
 		if slices.Contains(writtenFiles, v.Name) {
 			continue
@@ -234,21 +223,6 @@ func (o *ODF) Write(w io.Writer, ov Overrides) error {
 	err = fd.Close()
 	if err != nil {
 		return fmt.Errorf("finishing archive: %q", err)
-	}
-
-	return nil
-}
-
-// Opens the given file as fs.File
-func (o *ODF) Open(name string) (fs.File, error) {
-	return o.zipFD.Open(name)
-}
-
-// Close needs to be called at the end of the document processing to release any
-// allocated resources.
-func (o *ODF) Close() error {
-	if o.zipFDCloser != nil {
-		return o.zipFDCloser.Close()
 	}
 
 	return nil

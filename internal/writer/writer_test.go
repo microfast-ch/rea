@@ -1,4 +1,4 @@
-package template
+package writer
 
 import (
 	"bytes"
@@ -18,7 +18,7 @@ func TestTemplateODT(t *testing.T) {
 	require.Nil(t, err)
 
 	out := bytes.NewBuffer([]byte(""))
-	_, err = TemplateODT(tmpl, &TemplateConfig{}, out)
+	_, err = Template(tmpl, &TemplateConfig{}, out)
 	require.Nil(t, err)
 
 	// Readout content.xml and new mimetype

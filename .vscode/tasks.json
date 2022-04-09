@@ -1,0 +1,17 @@
+{
+	"version": "2.0.0",
+	"tasks": [
+		{
+			"label": "build",
+			"command": "go",
+			"type": "process",
+			"args": [
+				"build",
+				"-o",
+				"./dist/rea",
+				"${workspaceFolder}/main.go"
+			],
+			"problemMatcher": "$go"
+		}
+	]
+}

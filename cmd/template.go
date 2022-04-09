@@ -5,9 +5,9 @@ import (
 	"log"
 	"os"
 
+	"github.com/djboris9/rea/internal/factory"
+	"github.com/djboris9/rea/internal/writer"
 	"github.com/djboris9/rea/pkg/bundle"
-	"github.com/djboris9/rea/pkg/odf"
-	"github.com/djboris9/rea/pkg/template"
 	"github.com/spf13/cobra"
 )
 
@@ -54,15 +54,17 @@ func templateCmdRun(cmd *cobra.Command, args []string) {
 	if err != nil {
 		log.Fatalf("creating output file %s: %s", outputFile, err)
 	}
+
 	outputBuf := bufio.NewWriter(output)
 
-	ott, err := odf.NewFromFile(tmplFile)
+	docTemplate, err := factory.NewFromFile(tmplFile)
 	if err != nil {
-		log.Fatalf("loading template file %s: %s", tmplFile, err)
+		log.Fatalf("error loading template file %s: %s", tmplFile, err)
 	}
 
 	// Create bundle writer
 	var bundleW *bundle.BundleWriter
+
 	if bundleFile != "" {
 		bundleFD, err := os.Create(bundleFile)
 		if err != nil {
@@ -73,7 +75,7 @@ func templateCmdRun(cmd *cobra.Command, args []string) {
 	}
 
 	// Run rendering and first write bundle before throwing error
-	tpd, err := template.TemplateODT(ott, nil, outputBuf) // TODO: data
+	tpd, err := writer.Write(docTemplate, nil, outputBuf) // TODO: data
 	if bundleW != nil {
 		// TODO: Handle errors
 		bundleW.AddTemplateMimeType(tpd.TemplateMimeType)
@@ -82,10 +84,12 @@ func templateCmdRun(cmd *cobra.Command, args []string) {
 		bundleW.AddTemplateXMLTree(tpd.TemplateXMLTree)
 		bundleW.AddLuaNodePathStr(tpd.LuaNodePathStr)
 		bundleW.AddContentXML(tpd.ContentXML)
+
 		if errB := bundleW.Close(); errB != nil {
 			log.Printf("closing bundle writer: %s", errB)
 		}
 	}
+
 	if err != nil {
 		log.Fatalf("executing templating: %s", err)
 	}

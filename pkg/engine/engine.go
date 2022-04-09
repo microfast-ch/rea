@@ -8,6 +8,7 @@ import (
 	"sync"
 
 	"github.com/Shopify/go-lua"
+	"github.com/djboris9/rea/internal/safelua"
 	"github.com/djboris9/rea/pkg/xmltree"
 
 	goluagoUtil "github.com/Shopify/goluago/util"
@@ -63,17 +64,10 @@ func NewLuaEngine(lt *LuaTree, data *TemplateData) *LuaEngine {
 	}
 
 	// Restricted base library
-	l.Register("tostring", baseToString) // Required for Print
+	safelua.Add(l)
 
 	// Return engine
 	return e
-}
-
-// Extract from https://github.com/Shopify/go-lua/blob/9ab7793778076a5d7bd05bae27462473a0a29a4a/base.go#L301
-func baseToString(l *lua.State) int {
-	lua.CheckAny(l, 1)
-	lua.ToStringMeta(l, 1)
-	return 1
 }
 
 // This function is serialized on exec

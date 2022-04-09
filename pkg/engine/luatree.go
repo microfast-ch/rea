@@ -93,72 +93,102 @@ func NewLuaTree(tree *xmltree.Node) (*LuaTree, error) {
 	return lt, nil
 }
 
-// BlockToken expresses a 2 char wide token that can be embedded inside CharData
-type BlockToken string
+type luatreeFSMState int
 
 const (
-	BlockTokenStartCode  BlockToken = "[[" // Starts a code block
-	BlockTokenEndCode    BlockToken = "]]" // Ends a code block
-	BlockTokenStartPrint BlockToken = "[#" // Starts a printing block
-	BlockTokenEndPrint   BlockToken = "#]" // Ends a printing block
+	luatreeFSMStateChar  luatreeFSMState = iota // We are directly printing chars blocks, this is the default state
+	luatreeFSMStateCode  luatreeFSMState = iota // We are in a code block
+	luatreeFSMStatePrint luatreeFSMState = iota // We are in a print block
 )
 
-// isToken checks if the given token is a non char data token.
-func isToken(s string) bool {
-	if len(s) != 2 {
-		return false
-	}
-
-	tokens := []BlockToken{BlockTokenStartCode, BlockTokenEndCode, BlockTokenStartPrint, BlockTokenEndPrint}
-	for i := range tokens {
-		if s == string(tokens[i]) {
-			return true
-		}
-	}
-
-	return false
+// Finite State Machine
+type luatreeFSM struct {
+	inhibition []string
+	state      luatreeFSMState
+	sc         *io.Writer
+	indent     string
 }
 
-// codeBlockTokenizer splits the string d into strings with the tokens inside.
-// Tokens are expected to be 2 chars long. The resulting slice contains at least one element.
-// TODO: Add fuzzer
-// TODO: Use strings.Cut from Go 1.18
-func codeBlockTokenizer(d string) []string {
-	ret := []string{}
+func (fsm *luatreeFSM) Run() error {
+	for {
+		token := *xmltree.Node{} // TODO: Feed this from walk function
 
-	lastToken := 0
-	for idx := range d {
-		if idx+1 >= len(d) {
-			break
+		var err error
+		switch v := node.Token.(type) {
+		case xml.CharData:
+			toks := codeBlockTokenizer(string(v))
+			for i := range toks {
+				switch toks[i] {
+				case BlockTokenStartCode:
+					err = fsm.processStartCode()
+				case BlockTokenEndCode:
+					err = fsm.processEndCode()
+				case BlockTokenStartPrint:
+					err = fsm.processStartCode()
+				case BlockTokenEndPrint:
+					err = fsm.processEndCode()
+				default:
+					err = fsm.processChar(toks[i], len(toks) == 1)
+				}
+				if err != nil {
+					return fmt.Errorf("state transition: %w", err) // TODO message
+				}
+			}
+		case xml.StartElement:
+			err = fsm.processStartElement(v)
+		case xml.EndElement:
+			err = fsm.processEndElement(v)
+		case xml.Directive, xml.Comment, xml.ProcInst:
+			err = fsm.processNonstructuringElement(v)
+		default:
+			err = fmt.Errorf("unknown token %T", v)
 		}
 
-		if lastToken > idx {
-			// Skip round if we are still inside a token
-			continue
+		if err != nil {
+			return fmt.Errorf("state transition: %w", err) // TODO message
 		}
 
-		curPos := d[idx : idx+2]
-		if isToken(curPos) {
-			ret = append(ret, d[lastToken:idx])
-			ret = append(ret, curPos)
-			lastToken = idx + 2
-		}
 	}
-
-	ret = append(ret, d[lastToken:len(d)])
-
-	return ret
 }
 
-// blockTokenizerState represents the context in which the block tokenizer is.
-type blockTokenizerState int
+func (fsm *luatreeFSM) processChar(nodeId uint32, node *xmltree.Node, curToken []byte, singleToken bool) error {
+	switch fsm.state {
+	case luatreeFSMStateCode, luatreeFSMStatePrint:
+		// If we are in a code or print context, we must directly
+		// print the value
+		fmt.Fprintf(fsm.sc, "%s", next)
+	case luatreeFSMStateChar:
+		if singleToken {
+			fmt.Fprintf(&sc, "%sSetToken(%d) -- Type: %T\n", fsm.indent, nodeId, node)
+		} else {
+			// Add new CharData node according to original one and set the data to toks[i]
+			newNode := &xmltree.Node{
+				Token:  xml.CharData(curToken),
+				Parent: node.Parent,
+			}
+			newNodeId := lt.RegisterNode(newNode)
+			fmt.Fprintf(sc, "%sCharData(%d) --  %s\n", fsm.indent, newNodeId, sanitizeComment(curToken))
+		}
+	default:
+		return errors.New("invalid state")
+	}
 
-const (
-	blockTokenizerInvalid    blockTokenizerState = iota // We got an error
-	blockTokenizerCharBlock  blockTokenizerState = iota // We are in a char data context
-	blockTokenizerCodeBlock  blockTokenizerState = iota // We are in a code context
-	blockTokenizerPrintBlock blockTokenizerState = iota // We are in a printing context
-)
+	return nil
+}
+
+func (fsm *luatreeFSM) processStartCode() error {
+	// TODO: Check we came from a valid state
+
+	fsm.state = luatreeFSMStateCode
+
+	return nil
+}
+
+func (fsm *luatreeFSM) processNonstructuringElement(nodeId uint32, node *xmltree.Node) error {
+	// TODO: Check we came from a valid state
+	fmt.Fprintf(&fsm.sc, "%sSetToken(%d) -- Type: %T\n", fsm.indent, nodeId, node)
+	return nil
+}
 
 // handleCharData implements the block tokenizer that keeps track in which context
 // the xml.CharData is and emits the according commands for the lua program.

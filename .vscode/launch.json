@@ -31,7 +31,7 @@
 				"-t",
 				"examples/letter.odt",
 				"-o",
-				"dist/letter.odf",
+				"dist/letter.odt",
 				"-m",
 				"examples/letter.yaml",
 			]

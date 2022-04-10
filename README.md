@@ -26,9 +26,9 @@ that have a special function:
 - `[# bar #]`: This is a print block, everything between `[#` and `#]` is printed out into the document. It's a shorthand for calling `Print(bar)` in a code block.
 
 Let's take this example document:
-TODO: Picture of a document
+![A rea template document example](doc/readme-template.png)
 
-Here you see that we are using ... TODO: Explaination and picture of result
+Here you see that we are using ... TODO: Explaination and picture of result and mention paragraph bug
 
 #### Creating a template
 TODO:
@@ -72,3 +72,11 @@ Flags:
   -o, --output string     output document (default "document.odt")
   -t, --template string   template document (default "template.ott"
 ```
+
+## Future work
+As you may notice, this project is still in development. The following points
+are nasty and will be improved soon:
+
+- Creation of excessive linebreaks/paragraphs especially in loops will be mitigated
+- The looping syntax will be simplified
+- We will introduce some preprocessing macros (not the ones which you know from documents) to simplify syntax elements

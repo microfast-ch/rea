@@ -95,6 +95,10 @@ func (fsm *luatreeFSM) Next(nodeID uint32, node *xmltree.Node, depth uint) error
 
 	var err error
 
+	if node.Token == nil {
+		return nil
+	}
+
 	switch v := node.Token.(type) {
 	case xml.CharData:
 		toks := codeBlockTokenizer(string(v))

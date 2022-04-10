@@ -28,7 +28,46 @@ that have a special function:
 Let's take this example document:
 ![A rea template document example](doc/readme-template.png)
 
-Here you see that we are using ... TODO: Explaination and picture of result and mention paragraph bug
+Here you see a usual ODF (or OOXML/docx) document that has different blocks inside.
+The block `[# firstname #]` will print the value for the variable `firstname` to the document.
+
+Later you find a bloc `[[ for i,v in iparis(order.items) do ]]` that will create a for-loop in
+Lua that ranges over the `order.items` table and set the value to the variable `v`.
+This variable can be printed using `[# v #]` so the values of `order.items` will be rendered
+to a list.
+
+But also other control structures, variables and Lua functions can be used, like the `[[ if epay then ]]`
+block.
+
+The model for this document can be described as a yaml file and looks like this:
+```yaml
+data:
+  firstname: Alice
+  lastname: Muster
+  addr:
+    street: Tulpenweg 42
+    postal: "0123 Muster"
+    country: Switzerland
+  order:
+    title: "Home Accessories"
+    items:
+    - Super strong glue
+    - Electrical waterpump
+    - Flexible pipe, 5m
+    amount: "Fr. 120.-"
+  epay: false
+```
+
+Now you can run rea with the following command to merge the template with the model:
+```bash
+rea template -t examples/letter.odt -m examples/letter.yaml -o my-document.odt
+```
+
+You will get a `my-document.odt` that looks like this:
+![A rea document that was rendered](doc/readme-rendered.png)
+
+*Note: Currently there is an issue and you will most likely get unwanted paragraphs/newlines
+on the rendering result. We will surpress this and simplify the loop command too.*
 
 #### Creating a template
 TODO:

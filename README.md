@@ -70,8 +70,12 @@ You will get a `my-document.odt` that looks like this:
 on the rendering result. We will surpress this and simplify the loop command too.*
 
 #### Creating a template
-TODO:
-- Lua introduction (blocks, loops, data access) with examples
+As seen in the previous example, you can use Lua code between the `[[ foo ]]` blocks directly.
+Everything is executed in the same scope unless you create scopes by yourself. This
+allows you to assign and variables.
+
+Emitting values to the document works solely with the `Print(foo)` function, that you
+can also call using the special print block `[# foo #]`.
 
 #### Passing data to the document
 You can pass data to the template by having an input file as yaml. It should contain
@@ -111,6 +115,11 @@ Flags:
   -o, --output string     output document (default "document.odt")
   -t, --template string   template document (default "template.ott"
 ```
+
+We currently support ODF and OOXML text files.
+For ODF files the input can be the text `.odf` or the template `.ott` format,
+the result will be a `.odf` file in both cases.
+For OOXML the input file needs to be a `.docx` and the output file will be a `.docx` aswell.
 
 ## Future work
 As you may notice, this project is still in development. The following points

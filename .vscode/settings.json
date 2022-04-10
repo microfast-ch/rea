@@ -1,0 +1,21 @@
+{
+	"go.buildOnSave": "workspace",
+	"go.lintFlags": [
+		"--fast"
+	],
+	"go.lintTool": "golangci-lint",
+	"go.useLanguageServer": true,
+	"go.coverOnSave": true,
+	"go.coverOnSingleTest": true,
+	"go.coverOnSingleTestFile": true,
+	"go.editorContextMenuCommands": {
+		"removeTags": true,
+		"fillStruct": true,
+		"testFile": true,
+		"testPackage": true,
+		"generateTestForFile": true,
+		"generateTestForPackage": true,
+		"benchmarkAtCursor": true
+	},
+	"go.lintOnSave": "workspace",
+}

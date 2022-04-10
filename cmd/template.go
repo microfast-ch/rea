@@ -62,6 +62,7 @@ func templateCmdRun(cmd *cobra.Command, args []string) {
 
 	// Create bundle writer
 	var bundleW *bundle.Writer
+
 	if bundleFile != "" {
 		bundleFD, err := os.Create(bundleFile)
 		if err != nil {

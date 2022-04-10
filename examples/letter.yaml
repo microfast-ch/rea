@@ -5,10 +5,11 @@ data:
     street: Tulpenweg 42
     postal: "0123 Muster"
     country: Switzerland
-  order_title: "Home Accessories"
-  items:
-  - Super strong glue
-  - Electrical waterpump
-  - Flexible pipe, 5m
-  amount: "Fr. 120.-"
+  order:
+    title: "Home Accessories"
+    items:
+    - Super strong glue
+    - Electrical waterpump
+    - Flexible pipe, 5m
+    amount: "Fr. 120.-"
   epay: false

@@ -25,6 +25,7 @@ func prepareLua(t *testing.T, testdata string) (*LuaEngine, error) {
 
 	e := NewLuaEngine(lt, nil)
 	err = e.Exec()
+
 	if err != nil {
 		t.Errorf("executing lua engine: %s", err)
 	}
@@ -99,7 +100,6 @@ func TestRenderEqual(t *testing.T) {
 	if diff := cmp.Diff(wantXML, serializeNodePath(t, e.nodePath)); diff != "" {
 		t.Errorf("nodePath as XML mismatch (-want +got):\n%s", diff)
 	}
-
 }
 
 func TestRenderIfBlock(t *testing.T) {
@@ -178,6 +178,7 @@ func TestRenderLoopBlock(t *testing.T) {
   </ul>
 </p>`
 	e, err := prepareLua(t, testdata)
+
 	if err != nil {
 		t.Error(err)
 	}
@@ -270,7 +271,6 @@ func TestRenderIfBlockSpanned(t *testing.T) {
 		t.Errorf("nodePath as XML mismatch (-want +got):\n%s", diff)
 		t.Log(e.lt.LuaProg)
 	}
-
 }
 
 func TestRenderLoopSpanned(t *testing.T) {
@@ -365,20 +365,22 @@ func TestRenderLoopSpanned(t *testing.T) {
 	}
 }
 
-// TODO: Change to e.WriteXML
 func serializeNodePath(t *testing.T, nodePath []*xmltree.Node) string {
+	// TODO: Change to e.WriteXML
 	var buf strings.Builder
 	enc := xml.NewEncoder(&buf)
+
 	for i := range nodePath {
 		if err := enc.EncodeToken(nodePath[i].Token); err != nil {
 			t.Errorf("encoding token %d: %s", i, err)
 		}
 	}
+
 	enc.Flush()
+
 	return buf.String()
 }
 
-//func getCommonPaths(node *xmltree.Node, stack []*xmltree.Node) (leftTree []*xmltree.Node, commonParent *xmltree.Node, rightTree []*xmltree.Node) {
 func TestGetCommonPaths(t *testing.T) {
 	nodeA := &xmltree.Node{
 		Token: xml.CharData("nodeA"),
@@ -413,12 +415,15 @@ func TestGetCommonPaths(t *testing.T) {
 	}
 
 	lT, cP, rT := getCommonPaths(nodeA, nil)
+
 	if diff := cmp.Diff([]*xmltree.Node{}, lT); diff != "" {
 		t.Errorf("getCommonPaths(nodeA, nil).lT mismatch (-want +got):\n%s", diff)
 	}
+
 	if diff := cmp.Diff((*xmltree.Node)(nil), cP); diff != "" {
 		t.Errorf("getCommonPaths(nodeA, nil).cP mismatch (-want +got):\n%s", diff)
 	}
+
 	if diff := cmp.Diff([]*xmltree.Node{}, rT); diff != "" {
 		t.Errorf("getCommonPaths(nodeA, nil).rT mismatch (-want +got):\n%s", diff)
 	}
@@ -427,16 +432,18 @@ func TestGetCommonPaths(t *testing.T) {
 
 	stack := []*xmltree.Node{nodeA, nodeB, nodeC, nodeD, nodeE}
 	lT, cP, rT = getCommonPaths(nodeZ, stack)
+
 	if diff := cmp.Diff([]*xmltree.Node{nodeX, nodeY}, lT, opt); diff != "" {
 		t.Errorf("getCommonPaths(nodeZ, stack).lT mismatch (-want +got):\n%s", diff)
 	}
+
 	if diff := cmp.Diff(nodeB, cP); diff != "" {
 		t.Errorf("getCommonPaths(nodeZ, stack).cP mismatch (-want +got):\n%s", diff)
 	}
+
 	if diff := cmp.Diff([]*xmltree.Node{nodeC, nodeD, nodeE}, rT, opt); diff != "" {
 		t.Errorf("getCommonPaths(nodeZ, stack).rT mismatch (-want +got):\n%s", diff)
 	}
-
 }
 
 func TestRenderFragmentInCodeBlock(t *testing.T) {
@@ -560,7 +567,7 @@ func TestRenderUnbalancedParentStacks(t *testing.T) {
 		"EndNode(9)",              // </span>
 		"EndNode(11)",             // </p>
 		"SetToken(12)",            // Spaces
-		"StartNode(13)",           //<i>
+		"StartNode(13)",           // <i>
 		"Print(???)",              // "1"
 		"EndNode(i) - balanced",   // </i>
 		"StartNode(p) - balanced", // <p>
@@ -586,52 +593,56 @@ func TestRenderUnbalancedParentStacks(t *testing.T) {
 	}
 }
 
-func TestRenderUnbalancedUnknownIssue(t *testing.T) {
+func TestRenderUnbalancedMultipleLevels(t *testing.T) {
 	testdata := xml.Header + `
-  <body>
-      <p>[[ bag = {apple=3, banana=5, lemon=1}<span> </span>]]</p>
-      <p>[[ for fruit, num in <span>pairs(bag)</span> do ]]</p>
-      <list xml:id="list3891063543" text:style-name="L1">
-            <span>[# num .. "x " .. </span>
-            <span>fruit #][[ end ]]</span>
-      </list>
-  </body>`
+<body>
+  <p>[[ for i=1,2 do ]]</p>
+  <list>
+    <span>[# i #][[ end ]]</span>
+  </list>
+</body>`
 
 	wantXML := xml.Header + `
-<text>
-  <p><span></span></p>
-  <i>1</i><p><span></span></p>
-  <i>2</i>
-</text>` // TODO
+<body>
+  <p></p>
+  <list>
+    <span>1</span></list><p></p>
+  <list>
+    <span>2</span>
+  </list>
+</body>`
 
 	e, err := prepareLua(t, testdata)
 	if err != nil {
 		t.Error(err)
 	}
 
-	want := []string{ // TODO
-		"SetToken(1)",             // XML Header
-		"SetToken(2)",             // Spaces
-		"StartNode(3)",            // <text>
-		"SetToken(4)",             // Spaces
-		"StartNode(5)",            // <p>
-		"StartNode(7)",            // <span>
-		"EndNode(9)",              // </span>
-		"EndNode(11)",             // </p>
-		"SetToken(12)",            // Spaces
-		"StartNode(13)",           //<i>
-		"Print(???)",              // "1"
-		"EndNode(i) - balanced",   // </i>
-		"StartNode(p) - balanced", // <p>
-		"StartNode(7)",            // <span>
-		"EndNode(9)",              // </span>
-		"EndNode(11)",             // </p>
-		"SetToken(12)",            // Spaces
-		"StartNode(13)",           // <i>
-		"Print(???)",              // "2"
-		"EndNode(15)",             // </i>
-		"SetToken(16)",            // Spaces
-		"EndNode(17)",             // </text>
+	want := []string{
+		"SetToken(1)",              // XML Header
+		"SetToken(2)",              // Spaces
+		"StartNode(3)",             // <body>
+		"SetToken(4)",              // Spaces
+		"StartNode(5)",             // <p>
+		"EndNode(7)",               // </p>
+		"SetToken(8)",              // Spaces
+		"StartNode(9)",             // <list>
+		"SetToken(10)",             // Spaces
+		"StartNode(11)",            // <span>
+		"Print(???)",               // "1"
+		"EndNode(span) - balanced", // </span>
+		"EndNode(list) - balanced", // </list>
+		"StartNode(p) - balanced",  // <p>
+		"EndNode(7)",               // </p>
+		"SetToken(8)",              // Spaces
+		"StartNode(9)",             // <list>
+		"SetToken(10)",             // Spaces
+		"StartNode(11)",            // <span>
+		"Print(???)",               // "2"
+		"EndNode(13)",              // </span>
+		"SetToken(14)",             // Spaces
+		"EndNode(15)",              // </list>
+		"SetToken(16)",             // Spaces
+		"EndNode(17)",              // </body>
 	}
 
 	if diff := cmp.Diff(want, e.nodePathStr); diff != "" {

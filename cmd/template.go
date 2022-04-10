@@ -2,6 +2,7 @@ package cmd
 
 import (
 	"bufio"
+	"io/ioutil"
 	"log"
 	"os"
 
@@ -9,6 +10,7 @@ import (
 	"github.com/djboris9/rea/internal/writer"
 	"github.com/djboris9/rea/pkg/bundle"
 	"github.com/spf13/cobra"
+	"gopkg.in/yaml.v3"
 )
 
 func init() {
@@ -22,6 +24,7 @@ var templateCmd = &cobra.Command{
 	Run: templateCmdRun,
 }
 
+// nolint:funlen
 func templateCmdRun(cmd *cobra.Command, args []string) {
 	// Get flag variables
 	tmplFile, err := cmd.Flags().GetString("template")
@@ -38,11 +41,6 @@ func templateCmdRun(cmd *cobra.Command, args []string) {
 	if err != nil {
 		log.Fatalf("reading debug flag: %s", err)
 	}
-
-	//inputFile, err := cmd.Flags().GetString("input")
-	//if err != nil {
-	//	log.Fatalf("reading input flag: %w", err)
-	//}
 
 	outputFile, err := cmd.Flags().GetString("output")
 	if err != nil {
@@ -63,8 +61,7 @@ func templateCmdRun(cmd *cobra.Command, args []string) {
 	}
 
 	// Create bundle writer
-	var bundleW *bundle.BundleWriter
-
+	var bundleW *bundle.Writer
 	if bundleFile != "" {
 		bundleFD, err := os.Create(bundleFile)
 		if err != nil {
@@ -74,10 +71,30 @@ func templateCmdRun(cmd *cobra.Command, args []string) {
 		bundleW = bundle.New(bundleFD, debug)
 	}
 
+	modelFile, err := cmd.Flags().GetString("model")
+	if err != nil {
+		log.Fatalf("reading model flag: %w", err)
+	}
+
+	yamlFile, err := ioutil.ReadFile(modelFile)
+	if err != nil {
+		log.Fatalf("reading model file: %w", err)
+	}
+
+	var model writer.Model
+	err = yaml.Unmarshal(yamlFile, &model)
+
+	if err != nil {
+		log.Fatalf("unable to unmarshal yaml to model: %w", err)
+	}
+
 	// Run rendering and first write bundle before throwing error
-	tpd, err := writer.Write(docTemplate, nil, outputBuf) // TODO: data
-	if bundleW != nil {
-		// TODO: Handle errors
+	tpd, err := writer.Write(docTemplate, &model, outputBuf) // TODO: data
+	if err != nil {
+		log.Fatalf("executing templating: %s", err)
+	}
+
+	if bundleW != nil && tpd != nil {
 		bundleW.AddTemplateMimeType(tpd.TemplateMimeType)
 		bundleW.AddLuaProg(tpd.TemplateLuaProg)
 		bundleW.AddLuaNodeList(tpd.TemplateLuaNodeList)
@@ -90,25 +107,21 @@ func templateCmdRun(cmd *cobra.Command, args []string) {
 		}
 	}
 
-	if err != nil {
-		log.Fatalf("executing templating: %s", err)
-	}
-
 	// Finish
 	err = outputBuf.Flush()
 	if err != nil {
-		log.Fatalf("flushing output buffer: %s", err)
+		log.Fatalf("error flushing output buffer: %s", err)
 	}
 
 	err = output.Close()
 	if err != nil {
-		log.Fatalf("closing output file: %s", err)
+		log.Fatalf("error closing output file: %s", err)
 	}
 }
 
 func init() {
 	templateCmd.Flags().StringP("template", "t", "template.ott", "template document")
-	templateCmd.Flags().StringP("input", "i", "data.yaml", "data file")
+	templateCmd.Flags().StringP("model", "m", "data.yaml", "the model containing the data")
 	templateCmd.Flags().StringP("output", "o", "document.odt", "output document")
 	templateCmd.Flags().StringP("bundle", "b", "", "tar file to which the job bundle should be written")
 	templateCmd.Flags().BoolP("debug", "d", false, "write debug information to job bundle")

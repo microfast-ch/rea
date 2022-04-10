@@ -1,0 +1,28 @@
+{
+	"dockerFile": "./Dockerfile",
+	"extensions": [
+		"eamodio.gitlens",
+		"editorconfig.editorconfig",
+		"golang.go",
+	],
+	"mounts": [
+		"type=bind,src=${localWorkspaceFolder},dst=/app,consistency=cached",
+		"type=bind,src=${localEnv:HOME}${localEnv:USERPROFILE}/.ssh,dst=/home/vscode/.ssh,consistency=cached",
+		"type=volume,src=vscode-extensions,dst=/home/vscode/.vscode-server/extensions",
+		"type=volume,src=vscode-extensions-insiders,dst=/home/vscode/.vscode-server-insiders/extensions",
+		"type=volume,src=bashhistory,dst=/home/vscode/.bashhistory",
+	],
+	"name": "rea",
+	// Use this environment variable if you need to bind mount your local source code into a new container.
+	"remoteEnv": {
+		"LOCAL_WORKSPACE_FOLDER": "${localWorkspaceFolder}"
+	},
+	"remoteUser": "vscode",
+	"settings": {
+		"editor.formatOnSave": true,
+		"go.useLanguageServer": true,
+		"go.gopath": "/go",
+		"go.toolsGopath": "/go/bin",
+	},
+	"workspaceFolder": "/app",
+}

@@ -5,7 +5,7 @@ import (
 	"io/ioutil"
 	"testing"
 
-	"github.com/djboris9/rea/pkg/odf"
+	"github.com/djboris9/rea/internal/odf"
 	"github.com/stretchr/testify/require"
 )
 
@@ -18,11 +18,12 @@ func TestTemplateODT(t *testing.T) {
 	require.Nil(t, err)
 
 	out := bytes.NewBuffer([]byte(""))
-	_, err = Template(tmpl, &TemplateConfig{}, out)
+	_, err = Write(tmpl, &TemplateConfig{}, out)
 	require.Nil(t, err)
 
 	// Readout content.xml and new mimetype
 	doc, err := odf.New(bytes.NewReader(out.Bytes()), int64(out.Len()))
+	require.Nil(t, err)
 	require.Equal(t, "application/vnd.oasis.opendocument.text", doc.MIMEType()) // `text-template` is now `text`
 
 	contentFD, err := doc.Open("content.xml")

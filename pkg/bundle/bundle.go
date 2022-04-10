@@ -6,57 +6,76 @@ import (
 	"archive/tar"
 	"fmt"
 	"io"
+	"log"
 	"strings"
 
 	"github.com/djboris9/rea/pkg/xmltree"
 )
 
-type BundleWriter struct {
+type Writer struct {
 	tw    *tar.Writer
 	debug bool
 }
 
 // New creates a new writer. If debug is enabled, it will also persist objects that
 // are only for debugging needed.
-func New(w io.Writer, debug bool) *BundleWriter {
+func New(w io.Writer, debug bool) *Writer {
 	tw := tar.NewWriter(w)
 
-	return &BundleWriter{
+	return &Writer{
 		tw:    tw,
 		debug: debug,
 	}
 }
 
-func (b *BundleWriter) AddTemplateMimeType(mt string) error {
-	return b.writeFile("template/mimetype", mt)
+func (b *Writer) AddTemplateMimeType(mt string) {
+	err := b.writeFile("template/mimetype", mt)
+	if err != nil {
+		log.Fatalf("error: unable to write mimetype: %s", err)
+	}
 }
 
-func (b *BundleWriter) AddLuaProg(luaProg string) error {
-	return b.writeFile("template/luaprog.lua", luaProg)
+func (b *Writer) AddLuaProg(luaProg string) {
+	err := b.writeFile("template/luaprog.lua", luaProg)
+	if err != nil {
+		log.Fatalf("error: unable to write luaprog: %s", err)
+	}
 }
 
-func (b *BundleWriter) AddLuaNodeList(nodeList []*xmltree.Node) error {
+func (b *Writer) AddLuaNodeList(nodeList []*xmltree.Node) {
 	buf := &strings.Builder{}
 	for i := range nodeList {
 		fmt.Fprintf(buf, "%d: %v\n", i, nodeList[i].Token)
 	}
 
-	return b.writeFile("template/luaprog.nodelist", buf.String())
+	err := b.writeFile("template/luaprog.nodelist", buf.String())
+	if err != nil {
+		log.Fatalf("error: unable to write LuaNodeList: %s", err)
+	}
 }
 
-func (b *BundleWriter) AddTemplateXMLTree(tree *xmltree.Node) error {
-	return b.writeFile("template/content.xmltree", tree.Dump())
+func (b *Writer) AddTemplateXMLTree(tree *xmltree.Node) {
+	err := b.writeFile("template/content.xmltree", tree.Dump())
+	if err != nil {
+		log.Fatalf("error: unable to write LuaNodeList: %s", err)
+	}
 }
 
-func (b *BundleWriter) AddContentXML(doc string) error {
-	return b.writeFile("processed/content.xml", doc)
+func (b *Writer) AddContentXML(doc string) {
+	err := b.writeFile("processed/content.xml", doc)
+	if err != nil {
+		log.Fatalf("error: unable to write content.xml: %s", err)
+	}
 }
 
-func (b *BundleWriter) AddLuaNodePathStr(nodePath []string) error {
-	return b.writeFile("processed/nodepath.lua", strings.Join(nodePath, "\n"))
+func (b *Writer) AddLuaNodePathStr(nodePath []string) {
+	err := b.writeFile("processed/nodepath.lua", strings.Join(nodePath, "\n"))
+	if err != nil {
+		log.Fatalf("error: unable to write notepath.lua: %s", err)
+	}
 }
 
-func (b *BundleWriter) writeFile(fname, content string) error {
+func (b *Writer) writeFile(fname, content string) error {
 	hdr := &tar.Header{
 		Name: fname,
 		Mode: 0600,
@@ -74,7 +93,7 @@ func (b *BundleWriter) writeFile(fname, content string) error {
 	return nil
 }
 
-func (b *BundleWriter) Close() error {
+func (b *Writer) Close() error {
 	err := b.tw.Close()
 	if err != nil {
 		return fmt.Errorf("closing tar writer: %w", err)

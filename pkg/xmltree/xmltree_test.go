@@ -141,6 +141,7 @@ func TestNodeModification(t *testing.T) {
 	// Modify structure and chardata to check if the object is not copied by reference
 	newChild := child.Copy(child.Parent)
 
+	// nolint:ineffassign
 	tok := newChild.Nodes[0].Token.(xml.CharData)
 	tok = []byte("copied outside")
 	newChild.Nodes[0].Token = tok

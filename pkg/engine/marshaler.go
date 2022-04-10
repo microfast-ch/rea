@@ -3,9 +3,14 @@ package engine
 import (
 	"bufio"
 	"encoding/xml"
+	"errors"
 	"fmt"
 	"io"
+
+	"github.com/djboris9/rea/internal/utils"
 )
+
+var ErrXMLMarshalling = errors.New("xmlMarshallingErr")
 
 // XML unmarshaling and marshaling in Go is currently (1.18) not canonical.
 // We need to handle xml StartNode and EndNode separately
@@ -29,7 +34,12 @@ func EncodeToken(e *xml.Encoder, buf io.Writer, t xml.Token) error {
 		e.Flush() // Flush data from encoder, to write to the right location
 		// We cannot call here e.EncodeToken in any case, as it will complain about unbalanced tags
 		w := bufio.NewWriter(buf)
-		writeStartElement(w, v)
+		err := writeStartElement(w, v)
+
+		if err != nil {
+			return err
+		}
+
 		w.Flush()
 
 		return nil
@@ -48,16 +58,7 @@ func EncodeToken(e *xml.Encoder, buf io.Writer, t xml.Token) error {
 	}
 }
 
-func writeStartElement(buf *bufio.Writer, start xml.StartElement) {
-	buf.WriteByte('<')
-
-	if start.Name.Space != "" {
-		buf.WriteString(start.Name.Space)
-		buf.WriteByte(':')
-	}
-
-	buf.WriteString(start.Name.Local)
-
+func writeAttrType(start xml.StartElement, buf *bufio.Writer) error {
 	// Based on https://cs.opensource.google/go/go/+/refs/tags/go1.17.7:src/encoding/xml/marshal.go;l=711;drc=refs%2Ftags%2Fgo1.17.7
 	for _, attr := range start.Attr {
 		name := attr.Name
@@ -65,19 +66,80 @@ func writeStartElement(buf *bufio.Writer, start xml.StartElement) {
 			continue
 		}
 
-		buf.WriteByte(' ')
-
-		if name.Space != "" {
-			buf.WriteString(name.Space)
-			buf.WriteByte(':')
+		err := buf.WriteByte(' ')
+		if err != nil {
+			return utils.FormatError(ErrXMLMarshalling, fmt.Sprintf("unable to write to buffer: %v", err))
 		}
 
-		buf.WriteString(name.Local)
-		buf.WriteString(`="`)
+		if name.Space != "" {
+			_, err = buf.WriteString(name.Space)
+			if err != nil {
+				return utils.FormatError(ErrXMLMarshalling, fmt.Sprintf("unable to write to buffer: %v", err))
+			}
+
+			err = buf.WriteByte(':')
+			if err != nil {
+				return utils.FormatError(ErrXMLMarshalling, fmt.Sprintf("unable to write to buffer: %v", err))
+			}
+		}
+
+		_, err = buf.WriteString(name.Local)
+		if err != nil {
+			return utils.FormatError(ErrXMLMarshalling, fmt.Sprintf("unable to write to buffer: %v", err))
+		}
+
+		_, err = buf.WriteString(`="`)
+		if err != nil {
+			return utils.FormatError(ErrXMLMarshalling, fmt.Sprintf("unable to write to buffer: %v", err))
+		}
+
 		// p.EscapeString(attr.Value) // TODO: Is the lower line equivalent to the current line?
-		xml.EscapeText(buf, []byte(attr.Value))
-		buf.WriteByte('"')
+		err = xml.EscapeText(buf, []byte(attr.Value))
+		if err != nil {
+			return utils.FormatError(ErrXMLMarshalling, fmt.Sprintf("unable to write to buffer: %v", err))
+		}
+
+		err = buf.WriteByte('"')
+		if err != nil {
+			return utils.FormatError(ErrXMLMarshalling, fmt.Sprintf("unable to write to buffer: %v", err))
+		}
 	}
 
-	buf.WriteByte('>')
+	return nil
+}
+
+func writeStartElement(buf *bufio.Writer, start xml.StartElement) error {
+	err := buf.WriteByte('<')
+	if err != nil {
+		return utils.FormatError(ErrXMLMarshalling, fmt.Sprintf("unable to write to buffer: %v", err))
+	}
+
+	if start.Name.Space != "" {
+		_, err = buf.WriteString(start.Name.Space)
+		if err != nil {
+			return utils.FormatError(ErrXMLMarshalling, fmt.Sprintf("unable to write to buffer: %v", err))
+		}
+
+		err = buf.WriteByte(':')
+		if err != nil {
+			return utils.FormatError(ErrXMLMarshalling, fmt.Sprintf("unable to write to buffer: %v", err))
+		}
+	}
+
+	_, err = buf.WriteString(start.Name.Local)
+	if err != nil {
+		return utils.FormatError(ErrXMLMarshalling, fmt.Sprintf("unable to write to buffer: %v", err))
+	}
+
+	err = writeAttrType(start, buf)
+	if err != nil {
+		return err
+	}
+
+	err = buf.WriteByte('>')
+	if err != nil {
+		return utils.FormatError(ErrXMLMarshalling, fmt.Sprintf("unable to write to buffer: %v", err))
+	}
+
+	return nil
 }

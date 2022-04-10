@@ -2,10 +2,15 @@ package document
 
 import (
 	"archive/zip"
+	"errors"
 	"fmt"
 	"io"
 	"io/fs"
 )
+
+var ErrMimetype = errors.New("mimetypeErr")
+var ErrOverride = errors.New("overrideErr")
+var ErrArchive = errors.New("archiveErr")
 
 type PackagedDocument interface {
 	MIMEType() string

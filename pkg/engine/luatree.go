@@ -8,8 +8,11 @@ import (
 	"strings"
 	"sync"
 
+	"github.com/djboris9/rea/internal/utils"
 	"github.com/djboris9/rea/pkg/xmltree"
 )
+
+var ErrLuaTree = errors.New("luaTreeErr")
 
 // LuaTree represents an XML tree that is encoded into a lua program.
 type LuaTree struct {
@@ -129,11 +132,11 @@ func (fsm *luatreeFSM) Next(nodeID uint32, node *xmltree.Node, depth uint) error
 	case xml.Directive, xml.Comment, xml.ProcInst:
 		err = fsm.processNonstructuringElement(nodeID, node)
 	default:
-		err = fmt.Errorf("unknown token %T in node %d", v, nodeID)
+		err = utils.FormatError(ErrLuaTree, fmt.Sprintf("unknown token %T in node %d", v, nodeID))
 	}
 
 	if err != nil {
-		return fmt.Errorf("state transition failed for node %d: %w", nodeID, err)
+		return utils.FormatError(ErrLuaTree, fmt.Sprintf("state transition failed for node %d: %v", nodeID, err))
 	}
 
 	return nil
@@ -142,7 +145,7 @@ func (fsm *luatreeFSM) Next(nodeID uint32, node *xmltree.Node, depth uint) error
 func (fsm *luatreeFSM) processStartElement(nodeID uint32, node *xmltree.Node) error {
 	element, ok := node.Token.(xml.StartElement)
 	if !ok {
-		return errors.New("supplied wrong type for node")
+		return utils.FormatError(ErrLuaTree, fmt.Sprintf("wrong node type supplied"))
 	}
 
 	tag := fmt.Sprintf("%sStartNode(%d) --  %v", fsm.curIndent, nodeID, element.Name.Local)
@@ -161,7 +164,7 @@ func (fsm *luatreeFSM) processStartElement(nodeID uint32, node *xmltree.Node) er
 func (fsm *luatreeFSM) processEndElement(nodeID uint32, node *xmltree.Node) error {
 	element, ok := node.Token.(xml.EndElement)
 	if !ok {
-		return errors.New("supplied wrong type for node")
+		return utils.FormatError(ErrLuaTree, fmt.Sprintf("wrong node type supplied"))
 	}
 
 	tag := fmt.Sprintf("%sEndNode(%d) --  %v", fsm.curIndent, nodeID, element.Name.Local)
@@ -197,7 +200,7 @@ func (fsm *luatreeFSM) processChar(nodeID uint32, node *xmltree.Node, curToken s
 			fmt.Fprintf(fsm.sc, "%sCharData(%d) --  %s\n", fsm.curIndent, newNodeID, sanitizeComment(curToken))
 		}
 	default:
-		return errors.New("invalid state")
+		return utils.FormatError(ErrLuaTree, "invalid state")
 	}
 
 	return nil
@@ -206,12 +209,12 @@ func (fsm *luatreeFSM) processChar(nodeID uint32, node *xmltree.Node, curToken s
 func (fsm *luatreeFSM) processStartCode(nodeID uint32, node *xmltree.Node) error {
 	switch fsm.state {
 	case luatreeFSMStateCode, luatreeFSMStatePrint:
-		return errors.New("start code block reached from inside a print or code block")
+		return utils.FormatError(ErrLuaTree, "start code block reached from inside a print or code block")
 	case luatreeFSMStateChar:
 		fmt.Fprintf(fsm.sc, "%s", fsm.curIndent)
 		fsm.state = luatreeFSMStateCode
 	default:
-		return errors.New("invalid state")
+		return utils.FormatError(ErrLuaTree, "invalid state")
 	}
 
 	return nil
@@ -220,13 +223,13 @@ func (fsm *luatreeFSM) processStartCode(nodeID uint32, node *xmltree.Node) error
 func (fsm *luatreeFSM) processEndCode(nodeID uint32, node *xmltree.Node) error {
 	switch fsm.state {
 	case luatreeFSMStateChar, luatreeFSMStatePrint:
-		return errors.New("end code block reached outside a code block")
+		return utils.FormatError(ErrLuaTree, "end code block reached outside a code block")
 	case luatreeFSMStateCode:
 		fmt.Fprintf(fsm.sc, " -- CodeBlock\n")
 		fsm.printInhibition()
 		fsm.state = luatreeFSMStateChar
 	default:
-		return errors.New("invalid state")
+		return utils.FormatError(ErrLuaTree, "invalid state")
 	}
 
 	return nil
@@ -235,12 +238,12 @@ func (fsm *luatreeFSM) processEndCode(nodeID uint32, node *xmltree.Node) error {
 func (fsm *luatreeFSM) processStartPrint(nodeID uint32, node *xmltree.Node) error {
 	switch fsm.state {
 	case luatreeFSMStateCode, luatreeFSMStatePrint:
-		return errors.New("start print block reached from inside a print or code block")
+		return utils.FormatError(ErrLuaTree, "start print block reached from inside a print or code block")
 	case luatreeFSMStateChar:
 		fmt.Fprintf(fsm.sc, "%sPrint(", fsm.curIndent)
 		fsm.state = luatreeFSMStatePrint
 	default:
-		return errors.New("invalid state")
+		return utils.FormatError(ErrLuaTree, "invalid state")
 	}
 
 	return nil
@@ -249,13 +252,13 @@ func (fsm *luatreeFSM) processStartPrint(nodeID uint32, node *xmltree.Node) erro
 func (fsm *luatreeFSM) processEndPrint(nodeID uint32, node *xmltree.Node) error {
 	switch fsm.state {
 	case luatreeFSMStateChar, luatreeFSMStateCode:
-		return errors.New("end print block reached outside a code block")
+		return utils.FormatError(ErrLuaTree, "end print block reached outside a code block")
 	case luatreeFSMStatePrint:
 		fmt.Fprintf(fsm.sc, ") -- PrintBlock\n")
 		fsm.printInhibition()
 		fsm.state = luatreeFSMStateChar
 	default:
-		return errors.New("invalid state")
+		return utils.FormatError(ErrLuaTree, "invalid state")
 	}
 
 	return nil
@@ -270,7 +273,7 @@ func (fsm *luatreeFSM) processNonstructuringElement(nodeID uint32, node *xmltree
 	case luatreeFSMStateChar:
 		fmt.Fprintf(fsm.sc, "%s\n", tag)
 	default:
-		return errors.New("invalid state")
+		return utils.FormatError(ErrLuaTree, "invalid state")
 	}
 
 	return nil

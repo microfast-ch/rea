@@ -6,69 +6,88 @@ import (
 	"io/ioutil"
 	"strings"
 
+	"github.com/djboris9/rea/internal/utils"
 	"github.com/djboris9/rea/pkg/document"
 	"github.com/djboris9/rea/pkg/engine"
 	"github.com/djboris9/rea/pkg/xmltree"
 )
 
-// Write takes a text or text-template file, processed it with the given
-// configuration and writes the result to the writer.
-func Write(tmpl document.PackagedDocument, config *TemplateConfig, out io.Writer) (*TemplateProcessingData, error) {
-	tpd := &TemplateProcessingData{
-		TemplateMimeType: tmpl.MIMEType(),
-	}
-
+// Opens, reads and return the content.xml as XML node.
+func getContentFromTemplateAsXML(tmpl document.PackagedDocument) (*xmltree.Node, error) {
 	// Check for text or text-template mimetype
 	if tmpl.MIMEType() != "application/vnd.oasis.opendocument.text-template" &&
 		tmpl.MIMEType() != "application/vnd.oasis.opendocument.text" {
-		return tpd, fmt.Errorf("Unsupported mimetype: %s", tmpl.MIMEType())
+		return nil, utils.FormatError(document.ErrMimetype, fmt.Sprintf("Unsupported mimetype: %s", tmpl.MIMEType()))
 	}
 
-	// Get content.xml
 	tmplContentXML, err := tmpl.Open("content.xml")
 	if err != nil {
-		return tpd, fmt.Errorf("loading content.xml from template: %w", err)
+		return nil, fmt.Errorf("loading content.xml from template: %w", err)
 	}
 
 	tmplContent, err := ioutil.ReadAll(tmplContentXML)
 	if err != nil {
-		return tpd, fmt.Errorf("reading content.xml from template: %w", err)
+		return nil, fmt.Errorf("reading content.xml from template: %w", err)
 	}
 
-	// Run engine. TODO: With passed data
 	tree, err := xmltree.Parse(tmplContent)
 	if err != nil {
-		return tpd, fmt.Errorf("parsing content.xml as tree: %w", err)
+		return nil, fmt.Errorf("parsing content.xml as tree: %w", err)
 	}
 
-	tpd.TemplateXMLTree = tree
-	lt, err := engine.NewLuaTree(tree)
+	return tree, nil
+}
+
+// Run engine. TODO: Pass data from cli input.
+func processTemplateWithLuaEnginge(xmlTree *xmltree.Node, templateData *TemplateProcessingData) error {
+	templateData.TemplateXMLTree = xmlTree
+	luaTree, err := engine.NewLuaTree(xmlTree)
 
 	if err != nil {
-		return tpd, fmt.Errorf("creating lua tree from content.xml: %w", err)
+		return fmt.Errorf("creating lua tree from content.xml: %w", err)
 	}
 
-	tpd.TemplateLuaProg = lt.LuaProg
-	tpd.TemplateLuaNodeList = lt.NodeList
+	templateData.TemplateLuaProg = luaTree.LuaProg
+	templateData.TemplateLuaNodeList = luaTree.NodeList
 
-	e := engine.NewLuaEngine(lt, nil)
-	err = e.Exec()
+	luaEngine := engine.NewLuaEngine(luaTree, nil)
+	err = luaEngine.Exec()
 
 	if err != nil {
-		return tpd, fmt.Errorf("executing lua engine: %w", err)
+		return fmt.Errorf("executing lua engine: %w", err)
 	}
 
-	tpd.LuaNodePathStr = e.GetNodePathString()
+	templateData.LuaNodePathStr = luaEngine.GetNodePathString()
 
 	var buf strings.Builder
-	err = e.WriteXML(&buf)
+	err = luaEngine.WriteXML(&buf)
 
 	if err != nil {
-		return tpd, fmt.Errorf("writing executed template: %w", err)
+		return fmt.Errorf("writing executed template: %w", err)
 	}
 
 	content := buf.String()
-	tpd.ContentXML = content
+	templateData.ContentXML = content
+
+	return nil
+}
+
+// Write takes a text or text-template file, processed it with the given
+// configuration and writes the result to the writer.
+func Write(tmpl document.PackagedDocument, config *TemplateConfig, out io.Writer) (*TemplateProcessingData, error) {
+	templateData := &TemplateProcessingData{
+		TemplateMimeType: tmpl.MIMEType(),
+	}
+
+	xmlTree, err := getContentFromTemplateAsXML(tmpl)
+	if err != nil {
+		return templateData, err
+	}
+
+	err = processTemplateWithLuaEnginge(xmlTree, templateData)
+	if err != nil {
+		return templateData, err
+	}
 
 	// Write file, overriding mimetype and content.xml
 	// TODO: Override/Delete thumbnail and remove it from the manifest.xml
@@ -77,16 +96,16 @@ func Write(tmpl document.PackagedDocument, config *TemplateConfig, out io.Writer
 			Data: []byte("application/vnd.oasis.opendocument.text"),
 		},
 		"content.xml": document.Override{
-			Data: []byte(content),
+			Data: []byte(templateData.ContentXML),
 		},
 	}
 	err = tmpl.Write(out, ov)
 
 	if err != nil {
-		return tpd, fmt.Errorf("writing rendered template: %w", err)
+		return templateData, fmt.Errorf("writing rendered template: %w", err)
 	}
 
-	return tpd, nil
+	return templateData, nil
 }
 
 type TemplateConfig struct {

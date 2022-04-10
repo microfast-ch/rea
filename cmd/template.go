@@ -22,6 +22,7 @@ var templateCmd = &cobra.Command{
 	Run: templateCmdRun,
 }
 
+// nolint:funlen
 func templateCmdRun(cmd *cobra.Command, args []string) {
 	// Get flag variables
 	tmplFile, err := cmd.Flags().GetString("template")

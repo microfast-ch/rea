@@ -50,14 +50,14 @@ func templateCmdRun(cmd *cobra.Command, args []string) {
 	// Open files
 	output, err := os.Create(outputFile)
 	if err != nil {
-		log.Fatalf("creating output file %s: %s", outputFile, err)
+		log.Fatalf("creating output file %s: %v", outputFile, err)
 	}
 
 	outputBuf := bufio.NewWriter(output)
 
 	docTemplate, err := factory.NewFromFile(tmplFile)
 	if err != nil {
-		log.Fatalf("error loading template file %s: %s", tmplFile, err)
+		log.Fatalf("error loading template file %s: %v", tmplFile, err)
 	}
 
 	// Create bundle writer
@@ -73,19 +73,19 @@ func templateCmdRun(cmd *cobra.Command, args []string) {
 
 	modelFile, err := cmd.Flags().GetString("model")
 	if err != nil {
-		log.Fatalf("reading model flag: %w", err)
+		log.Fatalf("reading model flag: %v", err)
 	}
 
 	yamlFile, err := ioutil.ReadFile(modelFile)
 	if err != nil {
-		log.Fatalf("reading model file: %w", err)
+		log.Fatalf("reading model file: %v", err)
 	}
 
 	var model writer.Model
 	err = yaml.Unmarshal(yamlFile, &model)
 
 	if err != nil {
-		log.Fatalf("unable to unmarshal yaml to model: %w", err)
+		log.Fatalf("unable to unmarshal yaml to model: %v", err)
 	}
 
 	// Run rendering and first write bundle before throwing error

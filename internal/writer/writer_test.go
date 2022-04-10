@@ -18,7 +18,7 @@ func TestTemplateODT(t *testing.T) {
 	require.Nil(t, err)
 
 	out := bytes.NewBuffer([]byte(""))
-	_, err = Write(tmpl, &TemplateConfig{}, out)
+	_, err = Write(tmpl, &Model{}, out)
 	require.Nil(t, err)
 
 	// Readout content.xml and new mimetype

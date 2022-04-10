@@ -39,7 +39,7 @@ func getContentFromTemplateAsXML(tmpl document.PackagedDocument) (*xmltree.Node,
 }
 
 // Run engine. TODO: Pass data from cli input.
-func processTemplateWithLuaEnginge(xmlTree *xmltree.Node, templateData *TemplateProcessingData) error {
+func processTemplateWithLuaEnginge(xmlTree *xmltree.Node, templateData *TemplateProcessingData, model *Model) error {
 	templateData.TemplateXMLTree = xmlTree
 	luaTree, err := engine.NewLuaTree(xmlTree)
 
@@ -50,7 +50,11 @@ func processTemplateWithLuaEnginge(xmlTree *xmltree.Node, templateData *Template
 	templateData.TemplateLuaProg = luaTree.LuaProg
 	templateData.TemplateLuaNodeList = luaTree.NodeList
 
-	luaEngine := engine.NewLuaEngine(luaTree, nil)
+	engineData := &engine.TemplateData{
+		Data:     model.Data,
+		Metadata: model.Metadata,
+	}
+	luaEngine := engine.NewLuaEngine(luaTree, engineData)
 	err = luaEngine.Exec()
 
 	if err != nil {
@@ -90,7 +94,7 @@ func Write(tmpl document.PackagedDocument, model *Model, out io.Writer) (*Templa
 		return templateData, err
 	}
 
-	err = processTemplateWithLuaEnginge(xmlTree, templateData)
+	err = processTemplateWithLuaEnginge(xmlTree, templateData, model)
 	if err != nil {
 		return templateData, err
 	}

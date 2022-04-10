@@ -12,10 +12,28 @@
 			"cwd": "${workspaceFolder}",
 			"program": "${workspaceFolder}/main.go",
 			"args": [
+				"template",
 				"-t",
 				"testdata/not_odf.docx",
 				"-o",
 				"not_odf_rendered.docx"
+			]
+		},
+		{
+			"name": "Launch example",
+			"type": "go",
+			"request": "launch",
+			"mode": "debug",
+			"cwd": "${workspaceFolder}",
+			"program": "${workspaceFolder}/main.go",
+			"args": [
+				"template",
+				"-t",
+				"examples/letter.odt",
+				"-o",
+				"dist/letter.odt",
+				"-m",
+				"examples/letter.yaml",
 			]
 		}
 	]

@@ -44,6 +44,7 @@ type Node struct {
 func (n *Node) Append(tok xml.Token) *Node {
 	newNode := &Node{Token: tok, Parent: n}
 	n.Nodes = append(n.Nodes, newNode)
+
 	return newNode
 }
 
@@ -56,6 +57,7 @@ func (n *Node) MarshalXML(e *xml.Encoder, start xml.StartElement) error {
 			if t, ok := n.Token.(xml.ProcInst); !ok {
 				log.Println(t.Target) // TODO: Why is this here?
 			}
+
 			return err
 		}
 	}
@@ -88,7 +90,6 @@ func (n *Node) Copy(parent *Node) *Node {
 	}
 
 	return res
-
 }
 
 // Parse translates the given xml document to a XML tree.

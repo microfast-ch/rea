@@ -31,8 +31,8 @@ func isToken(s string) bool {
 // TODO: Add fuzzer
 func codeBlockTokenizer(d string) []string {
 	ret := []string{}
-
 	lastToken := 0
+
 	for idx := range d {
 		if idx+1 >= len(d) {
 			break
@@ -51,7 +51,7 @@ func codeBlockTokenizer(d string) []string {
 		}
 	}
 
-	ret = append(ret, d[lastToken:len(d)])
+	ret = append(ret, d[lastToken:])
 
 	return ret
 }

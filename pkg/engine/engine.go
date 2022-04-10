@@ -34,7 +34,7 @@ type TemplateData struct {
 func NewLuaEngine(lt *LuaTree, data *TemplateData) *LuaEngine {
 	// Initialize lua
 	l := lua.NewState()
-	//lua.BaseOpen(l)
+	// lua.BaseOpen(l)
 
 	e := &LuaEngine{
 		lt:       lt,
@@ -118,15 +118,15 @@ func (e *LuaEngine) GetNodePathString() []string {
 }
 
 func (e *LuaEngine) iStartNode(state *lua.State) int {
-	nodeId := lua.CheckInteger(state, -1)
-	node := e.lt.NodeList[nodeId]
+	nodeID := lua.CheckInteger(state, -1)
+	node := e.lt.NodeList[nodeID]
 
 	// Fill tree, before we add us to the parent stack
 	e.fillTree(node)
 
 	// Append node to the nodePath
 	e.nodePath = append(e.nodePath, node)
-	e.nodePathStr = append(e.nodePathStr, fmt.Sprintf("StartNode(%d)", nodeId))
+	e.nodePathStr = append(e.nodePathStr, fmt.Sprintf("StartNode(%d)", nodeID))
 
 	// Add node to the parent stack
 	e.parentStack = append(e.parentStack, node)
@@ -135,15 +135,15 @@ func (e *LuaEngine) iStartNode(state *lua.State) int {
 }
 
 func (e *LuaEngine) iEndNode(state *lua.State) int {
-	nodeId := lua.CheckInteger(state, -1)
-	node := e.lt.NodeList[nodeId]
+	nodeID := lua.CheckInteger(state, -1)
+	node := e.lt.NodeList[nodeID]
 
 	// Fill tree, before we remove the last parent from the stack
 	e.fillTree(node)
 
 	// Append node to the nodePath
 	e.nodePath = append(e.nodePath, node)
-	e.nodePathStr = append(e.nodePathStr, fmt.Sprintf("EndNode(%d)", nodeId))
+	e.nodePathStr = append(e.nodePathStr, fmt.Sprintf("EndNode(%d)", nodeID))
 
 	// Remove one level from the parent stack
 	e.parentStack = e.parentStack[:len(e.parentStack)-1]
@@ -185,6 +185,7 @@ func (e *LuaEngine) iPrint(state *lua.State) int {
 	// Based on https://github.com/Shopify/go-lua/blob/9ab7793778076a5d7bd05bae27462473a0a29a4a/base.go#L205
 	n := state.Top()
 	state.Global("tostring")
+
 	for i := 1; i <= n; i++ {
 		state.PushValue(-1) // function to be called
 		state.PushValue(i)  // value to print
@@ -197,6 +198,7 @@ func (e *LuaEngine) iPrint(state *lua.State) int {
 		if i > 1 {
 			sc.WriteString("\t")
 		}
+
 		sc.WriteString(s)
 		state.Pop(1) // pop result
 	}
@@ -254,10 +256,11 @@ func (e *LuaEngine) fillTree(newNode *xmltree.Node) {
 
 	// 2. Add all EndNodes from the current stack till the root (rightTree) in reverse order
 	tmpParent := lastStack
+
 	for revIdx := range rightTree {
 		i := len(rightTree) - revIdx - 1
-
 		elem := rightTree[i].Token.(xml.StartElement).End()
+
 		e.nodePath = append(e.nodePath, &xmltree.Node{
 			Token:  elem,
 			Parent: tmpParent,
@@ -283,7 +286,8 @@ func (e *LuaEngine) fillTree(newNode *xmltree.Node) {
 // as one parent which is also present in the stack.
 // leftTree holds the nodes that are parents of `node` up to the common root in reverse order.
 // rightTree holds the nodes that are parents of `stack` up to the common root in reverse order.
-func getCommonPaths(node *xmltree.Node, stack []*xmltree.Node) (leftTree []*xmltree.Node, commonParent *xmltree.Node, rightTree []*xmltree.Node) {
+func getCommonPaths(node *xmltree.Node, stack []*xmltree.Node) (leftTree []*xmltree.Node,
+	commonParent *xmltree.Node, rightTree []*xmltree.Node) {
 	// set empty slices instead of nils
 	leftTree = []*xmltree.Node{}
 	rightTree = []*xmltree.Node{}
@@ -307,6 +311,7 @@ nodeLoop:
 		if missingNode == commonParent {
 			break
 		}
+
 		rightTree = append(rightTree, missingNode)
 	}
 

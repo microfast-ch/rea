@@ -49,7 +49,6 @@ func validateManifest(b []byte) error {
 	}
 
 	return fmt.Errorf("no document in meta data found: %w", ErrContentTypeValidation)
-
 }
 
 func hasCorrextXmlns(e xml.StartElement) bool {
@@ -58,6 +57,7 @@ func hasCorrextXmlns(e xml.StartElement) bool {
 			return true
 		}
 	}
+
 	return false
 }
 

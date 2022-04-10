@@ -56,7 +56,9 @@ func next(l *lua.State) int {
 	if l.Next(1) {
 		return 2
 	}
+
 	l.PushNil()
+
 	return 1
 }
 
@@ -75,6 +77,7 @@ func pairs(method string, isZero bool, iter lua.Function) lua.Function {
 			l.PushValue(1) // argument 'self' to metamethod
 			l.Call(1, 3)   // get 3 values from metamethod
 		}
+
 		return 3
 	}
 }
@@ -85,6 +88,7 @@ func tonumber(l *lua.State) int {
 			l.PushNumber(n)
 			return 1
 		}
+
 		lua.CheckAny(l, 1)
 	} else {
 		s := lua.CheckString(l, 1)
@@ -95,7 +99,9 @@ func tonumber(l *lua.State) int {
 			return 1
 		}
 	}
+
 	l.PushNil()
+
 	return 1
 }
 
@@ -105,8 +111,10 @@ func intPairs(l *lua.State) int {
 	i++ // next value
 	l.PushInteger(i)
 	l.RawGetInt(1, i)
+
 	if l.IsNil(-1) {
 		return 1
 	}
+
 	return 2
 }

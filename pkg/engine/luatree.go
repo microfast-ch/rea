@@ -267,6 +267,7 @@ func (fsm *luatreeFSM) processNonstructuringElement(nodeId uint32, node *xmltree
 	default:
 		return errors.New("invalid state")
 	}
+
 	return nil
 }
 

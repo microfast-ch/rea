@@ -99,7 +99,6 @@ func TestRenderEqual(t *testing.T) {
 	if diff := cmp.Diff(wantXML, serializeNodePath(t, e.nodePath)); diff != "" {
 		t.Errorf("nodePath as XML mismatch (-want +got):\n%s", diff)
 	}
-
 }
 
 func TestRenderIfBlock(t *testing.T) {
@@ -270,7 +269,6 @@ func TestRenderIfBlockSpanned(t *testing.T) {
 		t.Errorf("nodePath as XML mismatch (-want +got):\n%s", diff)
 		t.Log(e.lt.LuaProg)
 	}
-
 }
 
 func TestRenderLoopSpanned(t *testing.T) {
@@ -369,16 +367,18 @@ func TestRenderLoopSpanned(t *testing.T) {
 func serializeNodePath(t *testing.T, nodePath []*xmltree.Node) string {
 	var buf strings.Builder
 	enc := xml.NewEncoder(&buf)
+
 	for i := range nodePath {
 		if err := enc.EncodeToken(nodePath[i].Token); err != nil {
 			t.Errorf("encoding token %d: %s", i, err)
 		}
 	}
+
 	enc.Flush()
+
 	return buf.String()
 }
 
-//func getCommonPaths(node *xmltree.Node, stack []*xmltree.Node) (leftTree []*xmltree.Node, commonParent *xmltree.Node, rightTree []*xmltree.Node) {
 func TestGetCommonPaths(t *testing.T) {
 	nodeA := &xmltree.Node{
 		Token: xml.CharData("nodeA"),
@@ -436,7 +436,6 @@ func TestGetCommonPaths(t *testing.T) {
 	if diff := cmp.Diff([]*xmltree.Node{nodeC, nodeD, nodeE}, rT, opt); diff != "" {
 		t.Errorf("getCommonPaths(nodeZ, stack).rT mismatch (-want +got):\n%s", diff)
 	}
-
 }
 
 func TestRenderFragmentInCodeBlock(t *testing.T) {

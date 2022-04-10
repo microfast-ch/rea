@@ -31,6 +31,7 @@ func EncodeToken(e *xml.Encoder, buf io.Writer, t xml.Token) error {
 		w := bufio.NewWriter(buf)
 		writeStartElement(w, v)
 		w.Flush()
+
 		return nil
 	case xml.EndElement:
 		e.Flush() // Flush data from encoder, to write to the right location
@@ -39,6 +40,7 @@ func EncodeToken(e *xml.Encoder, buf io.Writer, t xml.Token) error {
 		} else {
 			fmt.Fprintf(buf, "</%s:%s>", v.Name.Space, v.Name.Local)
 		}
+
 		return nil
 	default:
 		return e.EncodeToken(t)
@@ -67,11 +69,10 @@ func writeStartElement(buf *bufio.Writer, start xml.StartElement) {
 		}
 		buf.WriteString(name.Local)
 		buf.WriteString(`="`)
-		//p.EscapeString(attr.Value) // TODO: Is the lower line equivalent to the current line?
+		// p.EscapeString(attr.Value) // TODO: Is the lower line equivalent to the current line?
 		xml.EscapeText(buf, []byte(attr.Value))
 		buf.WriteByte('"')
 	}
 
 	buf.WriteByte('>')
-
 }

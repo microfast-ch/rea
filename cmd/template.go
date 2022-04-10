@@ -63,7 +63,7 @@ func templateCmdRun(cmd *cobra.Command, args []string) {
 	}
 
 	// Create bundle writer
-	var bundleW *bundle.BundleWriter
+	var bundleW *bundle.Writer
 
 	if bundleFile != "" {
 		bundleFD, err := os.Create(bundleFile)
@@ -76,8 +76,11 @@ func templateCmdRun(cmd *cobra.Command, args []string) {
 
 	// Run rendering and first write bundle before throwing error
 	tpd, err := writer.Write(docTemplate, nil, outputBuf) // TODO: data
-	if bundleW != nil {
-		// TODO: Handle errors
+	if err != nil {
+		log.Fatalf("executing templating: %s", err)
+	}
+
+	if bundleW != nil && tpd != nil {
 		bundleW.AddTemplateMimeType(tpd.TemplateMimeType)
 		bundleW.AddLuaProg(tpd.TemplateLuaProg)
 		bundleW.AddLuaNodeList(tpd.TemplateLuaNodeList)
@@ -90,19 +93,15 @@ func templateCmdRun(cmd *cobra.Command, args []string) {
 		}
 	}
 
-	if err != nil {
-		log.Fatalf("executing templating: %s", err)
-	}
-
 	// Finish
 	err = outputBuf.Flush()
 	if err != nil {
-		log.Fatalf("flushing output buffer: %s", err)
+		log.Fatalf("error flushing output buffer: %s", err)
 	}
 
 	err = output.Close()
 	if err != nil {
-		log.Fatalf("closing output file: %s", err)
+		log.Fatalf("error closing output file: %s", err)
 	}
 }
 

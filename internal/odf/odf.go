@@ -13,6 +13,8 @@ import (
 	"golang.org/x/exp/slices"
 )
 
+var ErrUnexpectedMimeType = errors.New("mimetype not an OpenDocument file")
+
 type Odf struct {
 	template *document.Template
 }
@@ -94,7 +96,7 @@ func (o *Odf) ValidateAndSetMIMEType() error {
 
 	// https://www.iana.org/assignments/media-types/media-types.xhtml
 	if !strings.HasPrefix(mimetype, "application/vnd.oasis.opendocument.") {
-		return fmt.Errorf("mimetype %q not known to be a OpenDocument file", mimetype)
+		return fmt.Errorf("%s: %w", mimetype, ErrUnexpectedMimeType)
 	}
 
 	o.template.SetMIMEType(mimetype)

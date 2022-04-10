@@ -2,8 +2,9 @@ package xmltree
 
 import (
 	"encoding/xml"
-	"github.com/google/go-cmp/cmp"
 	"testing"
+
+	"github.com/google/go-cmp/cmp"
 )
 
 const testdata = xml.Header + `
@@ -96,7 +97,6 @@ func TestGetParent(t *testing.T) {
 	if gotParent != parent {
 		t.Errorf("Wanted node %p, got %p as parent of %p", parent, gotParent, child)
 	}
-
 }
 
 func TestNodeModification(t *testing.T) {
@@ -140,6 +140,7 @@ func TestNodeModification(t *testing.T) {
 
 	// Modify structure and chardata to check if the object is not copied by reference
 	newChild := child.Copy(child.Parent)
+
 	tok := newChild.Nodes[0].Token.(xml.CharData)
 	tok = []byte("copied outside")
 	newChild.Nodes[0].Token = tok

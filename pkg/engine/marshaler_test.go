@@ -22,10 +22,14 @@ func TestCustomEncoder(t *testing.T) {
 
 	// Flatten path
 	nodePath := []*xmltree.Node{}
-	xmltree.Walk(tree, func(node *xmltree.Node, depth uint) error {
+	err = xmltree.Walk(tree, func(node *xmltree.Node, depth uint) error {
 		nodePath = append(nodePath, node)
 		return nil
 	})
+
+	if err != nil {
+		t.Error(t)
+	}
 
 	// Verify dataset
 	if diff := cmp.Diff(wantXML, serializeNodePathCustom(t, nodePath)); diff != "" {
@@ -45,10 +49,14 @@ func TestCustomEncoderLarge(t *testing.T) {
 
 	// Flatten path
 	nodePath := []*xmltree.Node{}
-	xmltree.Walk(tree, func(node *xmltree.Node, depth uint) error {
+	err = xmltree.Walk(tree, func(node *xmltree.Node, depth uint) error {
 		nodePath = append(nodePath, node)
 		return nil
 	})
+
+	if err != nil {
+		t.Error(t)
+	}
 
 	// Verify dataset
 	if diff := cmp.Diff(testDocLargeWant, serializeNodePathCustom(t, nodePath)); diff != "" {
@@ -59,12 +67,15 @@ func TestCustomEncoderLarge(t *testing.T) {
 func serializeNodePathCustom(t *testing.T, nodePath []*xmltree.Node) string {
 	var buf strings.Builder
 	enc := xml.NewEncoder(&buf)
+
 	for i := range nodePath {
 		if err := EncodeToken(enc, &buf, nodePath[i].Token); err != nil {
 			t.Errorf("encoding token %d: %s", i, err)
 		}
 	}
+
 	enc.Flush()
+
 	return buf.String()
 }
 

@@ -32,7 +32,7 @@ Here you see that we are using ... TODO: Explaination and picture of result
 
 #### Creating a template
 TODO:
-- Lua introduction and examples
+- Lua introduction (blocks, loops, data access) with examples
 
 #### Passing data to the document
 You can pass data to the template by having an input file as yaml. It should contain

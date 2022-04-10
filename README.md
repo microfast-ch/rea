@@ -26,13 +26,56 @@ that have a special function:
 - `[# bar #]`: This is a print block, everything between `[#` and `#]` is printed out into the document. It's a shorthand for calling `Print(bar)` in a code block.
 
 Let's take this example document:
-TODO: Picture of a document
+![A rea template document example](doc/readme-template.png)
 
-Here you see that we are using ... TODO: Explaination and picture of result
+Here you see a usual ODF (or OOXML/docx) document that has different blocks inside.
+The block `[# firstname #]` will print the value for the variable `firstname` to the document.
+
+Later you find a bloc `[[ for i,v in iparis(order.items) do ]]` that will create a for-loop in
+Lua that ranges over the `order.items` table and set the value to the variable `v`.
+This variable can be printed using `[# v #]` so the values of `order.items` will be rendered
+to a list.
+
+But also other control structures, variables and Lua functions can be used, like the `[[ if epay then ]]`
+block.
+
+The model for this document can be described as a yaml file and looks like this:
+```yaml
+data:
+  firstname: Alice
+  lastname: Muster
+  addr:
+    street: Tulpenweg 42
+    postal: "0123 Muster"
+    country: Switzerland
+  order:
+    title: "Home Accessories"
+    items:
+    - Super strong glue
+    - Electrical waterpump
+    - Flexible pipe, 5m
+    amount: "Fr. 120.-"
+  epay: false
+```
+
+Now you can run rea with the following command to merge the template with the model:
+```bash
+rea template -t examples/letter.odt -m examples/letter.yaml -o my-document.odt
+```
+
+You will get a `my-document.odt` that looks like this:
+![A rea document that was rendered](doc/readme-rendered.png)
+
+*Note: Currently there is an issue and you will most likely get unwanted paragraphs/newlines
+on the rendering result. We will surpress this and simplify the loop command too.*
 
 #### Creating a template
-TODO:
-- Lua introduction and examples
+As seen in the previous example, you can use Lua code between the `[[ foo ]]` blocks directly.
+Everything is executed in the same scope unless you create scopes by yourself. This
+allows you to assign and variables.
+
+Emitting values to the document works solely with the `Print(foo)` function, that you
+can also call using the special print block `[# foo #]`.
 
 #### Passing data to the document
 You can pass data to the template by having an input file as yaml. It should contain
@@ -68,7 +111,20 @@ Flags:
   -b, --bundle string     tar file to which the job bundle should be written
   -d, --debug             write debug information to job bundle
   -h, --help              help for template
-  -i, --input string      data file (default "data.yaml")
+  -m, --model string      the model file (default "data.yaml")
   -o, --output string     output document (default "document.odt")
   -t, --template string   template document (default "template.ott"
 ```
+
+We currently support ODF and OOXML text files.
+For ODF files the input can be the text `.odf` or the template `.ott` format,
+the result will be a `.odf` file in both cases.
+For OOXML the input file needs to be a `.docx` and the output file will be a `.docx` aswell.
+
+## Future work
+As you may notice, this project is still in development. The following points
+are nasty and will be improved soon:
+
+- Creation of excessive linebreaks/paragraphs especially in loops will be mitigated
+- The looping syntax will be simplified
+- We will introduce some preprocessing macros (not the ones which you know from documents) to simplify syntax elements

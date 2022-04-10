@@ -72,9 +72,15 @@ func processTemplateWithLuaEnginge(xmlTree *xmltree.Node, templateData *Template
 	return nil
 }
 
+// Passed data must be a primitive or a map.
+type Model struct {
+	Data     map[string]any
+	Metadata map[string]string
+}
+
 // Write takes a text or text-template file, processed it with the given
 // configuration and writes the result to the writer.
-func Write(tmpl document.PackagedDocument, config *TemplateConfig, out io.Writer) (*TemplateProcessingData, error) {
+func Write(tmpl document.PackagedDocument, model *Model, out io.Writer) (*TemplateProcessingData, error) {
 	templateData := &TemplateProcessingData{
 		TemplateMimeType: tmpl.MIMEType(),
 	}
@@ -106,12 +112,6 @@ func Write(tmpl document.PackagedDocument, config *TemplateConfig, out io.Writer
 	}
 
 	return templateData, nil
-}
-
-type TemplateConfig struct {
-	UserData any
-	// MetaData struct { Author etc. }
-	// Style overrides etc.
 }
 
 type TemplateProcessingData struct {

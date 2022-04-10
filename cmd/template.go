@@ -2,6 +2,7 @@ package cmd
 
 import (
 	"bufio"
+	"io/ioutil"
 	"log"
 	"os"
 
@@ -9,6 +10,7 @@ import (
 	"github.com/djboris9/rea/internal/writer"
 	"github.com/djboris9/rea/pkg/bundle"
 	"github.com/spf13/cobra"
+	"gopkg.in/yaml.v3"
 )
 
 func init() {
@@ -40,11 +42,6 @@ func templateCmdRun(cmd *cobra.Command, args []string) {
 		log.Fatalf("reading debug flag: %s", err)
 	}
 
-	// inputFile, err := cmd.Flags().GetString("input")
-	// if err != nil {
-	// 	log.Fatalf("reading input flag: %w", err)
-	// }
-
 	outputFile, err := cmd.Flags().GetString("output")
 	if err != nil {
 		log.Fatalf("reading output flag: %s", err)
@@ -65,7 +62,6 @@ func templateCmdRun(cmd *cobra.Command, args []string) {
 
 	// Create bundle writer
 	var bundleW *bundle.Writer
-
 	if bundleFile != "" {
 		bundleFD, err := os.Create(bundleFile)
 		if err != nil {
@@ -75,8 +71,25 @@ func templateCmdRun(cmd *cobra.Command, args []string) {
 		bundleW = bundle.New(bundleFD, debug)
 	}
 
+	modelFile, err := cmd.Flags().GetString("model")
+	if err != nil {
+		log.Fatalf("reading model flag: %w", err)
+	}
+
+	yamlFile, err := ioutil.ReadFile(modelFile)
+	if err != nil {
+		log.Fatalf("reading model file: %w", err)
+	}
+
+	var model writer.Model
+	err = yaml.Unmarshal(yamlFile, &model)
+
+	if err != nil {
+		log.Fatalf("unable to unmarshal yaml to model: %w", err)
+	}
+
 	// Run rendering and first write bundle before throwing error
-	tpd, err := writer.Write(docTemplate, nil, outputBuf) // TODO: data
+	tpd, err := writer.Write(docTemplate, &model, outputBuf) // TODO: data
 	if err != nil {
 		log.Fatalf("executing templating: %s", err)
 	}
@@ -108,7 +121,7 @@ func templateCmdRun(cmd *cobra.Command, args []string) {
 
 func init() {
 	templateCmd.Flags().StringP("template", "t", "template.ott", "template document")
-	templateCmd.Flags().StringP("input", "i", "data.yaml", "data file")
+	templateCmd.Flags().StringP("model", "m", "data.yaml", "the model containing the data")
 	templateCmd.Flags().StringP("output", "o", "document.odt", "output document")
 	templateCmd.Flags().StringP("bundle", "b", "", "tar file to which the job bundle should be written")
 	templateCmd.Flags().BoolP("debug", "d", false, "write debug information to job bundle")

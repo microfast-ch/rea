@@ -39,7 +39,7 @@ func getContentFromTemplateAsXML(tmpl document.PackagedDocument) (*xmltree.Node,
 }
 
 // Run engine. TODO: Pass data from cli input.
-func processTemplateWithLuaEnginge(xmlTree *xmltree.Node, templateData *TemplateProcessingData) error {
+func processTemplateWithLuaEnginge(xmlTree *xmltree.Node, templateData *TemplateProcessingData, model *Model) error {
 	templateData.TemplateXMLTree = xmlTree
 	luaTree, err := engine.NewLuaTree(xmlTree)
 
@@ -50,7 +50,11 @@ func processTemplateWithLuaEnginge(xmlTree *xmltree.Node, templateData *Template
 	templateData.TemplateLuaProg = luaTree.LuaProg
 	templateData.TemplateLuaNodeList = luaTree.NodeList
 
-	luaEngine := engine.NewLuaEngine(luaTree, nil)
+	engineData := &engine.TemplateData{
+		Data:     model.Data,
+		Metadata: model.Metadata,
+	}
+	luaEngine := engine.NewLuaEngine(luaTree, engineData)
 	err = luaEngine.Exec()
 
 	if err != nil {
@@ -72,9 +76,15 @@ func processTemplateWithLuaEnginge(xmlTree *xmltree.Node, templateData *Template
 	return nil
 }
 
+// Passed data must be a primitive or a map.
+type Model struct {
+	Data     map[string]any
+	Metadata map[string]string
+}
+
 // Write takes a text or text-template file, processed it with the given
 // configuration and writes the result to the writer.
-func Write(tmpl document.PackagedDocument, config *TemplateConfig, out io.Writer) (*TemplateProcessingData, error) {
+func Write(tmpl document.PackagedDocument, model *Model, out io.Writer) (*TemplateProcessingData, error) {
 	templateData := &TemplateProcessingData{
 		TemplateMimeType: tmpl.MIMEType(),
 	}
@@ -84,7 +94,7 @@ func Write(tmpl document.PackagedDocument, config *TemplateConfig, out io.Writer
 		return templateData, err
 	}
 
-	err = processTemplateWithLuaEnginge(xmlTree, templateData)
+	err = processTemplateWithLuaEnginge(xmlTree, templateData, model)
 	if err != nil {
 		return templateData, err
 	}
@@ -106,12 +116,6 @@ func Write(tmpl document.PackagedDocument, config *TemplateConfig, out io.Writer
 	}
 
 	return templateData, nil
-}
-
-type TemplateConfig struct {
-	UserData any
-	// MetaData struct { Author etc. }
-	// Style overrides etc.
 }
 
 type TemplateProcessingData struct {

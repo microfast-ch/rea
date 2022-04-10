@@ -68,7 +68,7 @@ Flags:
   -b, --bundle string     tar file to which the job bundle should be written
   -d, --debug             write debug information to job bundle
   -h, --help              help for template
-  -i, --input string      data file (default "data.yaml")
+  -m, --model string      the model file (default "data.yaml")
   -o, --output string     output document (default "document.odt")
   -t, --template string   template document (default "template.ott"
 ```

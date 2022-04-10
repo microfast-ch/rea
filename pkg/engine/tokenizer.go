@@ -1,6 +1,6 @@
 package engine
 
-// BlockToken expresses a 2 char wide token that can be embedded inside CharData
+// BlockToken expresses a 2 char wide token that can be embedded inside CharData.
 type BlockToken string
 
 const (
@@ -28,11 +28,11 @@ func isToken(s string) bool {
 
 // codeBlockTokenizer splits the string d into strings with the tokens inside.
 // Tokens are expected to be 2 chars long. The resulting slice contains at least one element.
-// TODO: Add fuzzer
+// TODO: Add fuzzer.
 func codeBlockTokenizer(d string) []string {
 	ret := []string{}
-
 	lastToken := 0
+
 	for idx := range d {
 		if idx+1 >= len(d) {
 			break
@@ -51,7 +51,7 @@ func codeBlockTokenizer(d string) []string {
 		}
 	}
 
-	ret = append(ret, d[lastToken:len(d)])
+	ret = append(ret, d[lastToken:])
 
 	return ret
 }

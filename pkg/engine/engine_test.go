@@ -25,6 +25,7 @@ func prepareLua(t *testing.T, testdata string) (*LuaEngine, error) {
 
 	e := NewLuaEngine(lt, nil)
 	err = e.Exec()
+
 	if err != nil {
 		t.Errorf("executing lua engine: %s", err)
 	}
@@ -99,7 +100,6 @@ func TestRenderEqual(t *testing.T) {
 	if diff := cmp.Diff(wantXML, serializeNodePath(t, e.nodePath)); diff != "" {
 		t.Errorf("nodePath as XML mismatch (-want +got):\n%s", diff)
 	}
-
 }
 
 func TestRenderIfBlock(t *testing.T) {
@@ -178,6 +178,7 @@ func TestRenderLoopBlock(t *testing.T) {
   </ul>
 </p>`
 	e, err := prepareLua(t, testdata)
+
 	if err != nil {
 		t.Error(err)
 	}
@@ -270,7 +271,6 @@ func TestRenderIfBlockSpanned(t *testing.T) {
 		t.Errorf("nodePath as XML mismatch (-want +got):\n%s", diff)
 		t.Log(e.lt.LuaProg)
 	}
-
 }
 
 func TestRenderLoopSpanned(t *testing.T) {
@@ -365,20 +365,22 @@ func TestRenderLoopSpanned(t *testing.T) {
 	}
 }
 
-// TODO: Change to e.WriteXML
 func serializeNodePath(t *testing.T, nodePath []*xmltree.Node) string {
+	// TODO: Change to e.WriteXML
 	var buf strings.Builder
 	enc := xml.NewEncoder(&buf)
+
 	for i := range nodePath {
 		if err := enc.EncodeToken(nodePath[i].Token); err != nil {
 			t.Errorf("encoding token %d: %s", i, err)
 		}
 	}
+
 	enc.Flush()
+
 	return buf.String()
 }
 
-//func getCommonPaths(node *xmltree.Node, stack []*xmltree.Node) (leftTree []*xmltree.Node, commonParent *xmltree.Node, rightTree []*xmltree.Node) {
 func TestGetCommonPaths(t *testing.T) {
 	nodeA := &xmltree.Node{
 		Token: xml.CharData("nodeA"),
@@ -413,12 +415,15 @@ func TestGetCommonPaths(t *testing.T) {
 	}
 
 	lT, cP, rT := getCommonPaths(nodeA, nil)
+
 	if diff := cmp.Diff([]*xmltree.Node{}, lT); diff != "" {
 		t.Errorf("getCommonPaths(nodeA, nil).lT mismatch (-want +got):\n%s", diff)
 	}
+
 	if diff := cmp.Diff((*xmltree.Node)(nil), cP); diff != "" {
 		t.Errorf("getCommonPaths(nodeA, nil).cP mismatch (-want +got):\n%s", diff)
 	}
+
 	if diff := cmp.Diff([]*xmltree.Node{}, rT); diff != "" {
 		t.Errorf("getCommonPaths(nodeA, nil).rT mismatch (-want +got):\n%s", diff)
 	}
@@ -427,16 +432,18 @@ func TestGetCommonPaths(t *testing.T) {
 
 	stack := []*xmltree.Node{nodeA, nodeB, nodeC, nodeD, nodeE}
 	lT, cP, rT = getCommonPaths(nodeZ, stack)
+
 	if diff := cmp.Diff([]*xmltree.Node{nodeX, nodeY}, lT, opt); diff != "" {
 		t.Errorf("getCommonPaths(nodeZ, stack).lT mismatch (-want +got):\n%s", diff)
 	}
+
 	if diff := cmp.Diff(nodeB, cP); diff != "" {
 		t.Errorf("getCommonPaths(nodeZ, stack).cP mismatch (-want +got):\n%s", diff)
 	}
+
 	if diff := cmp.Diff([]*xmltree.Node{nodeC, nodeD, nodeE}, rT, opt); diff != "" {
 		t.Errorf("getCommonPaths(nodeZ, stack).rT mismatch (-want +got):\n%s", diff)
 	}
-
 }
 
 func TestRenderFragmentInCodeBlock(t *testing.T) {
@@ -560,7 +567,7 @@ func TestRenderUnbalancedParentStacks(t *testing.T) {
 		"EndNode(9)",              // </span>
 		"EndNode(11)",             // </p>
 		"SetToken(12)",            // Spaces
-		"StartNode(13)",           //<i>
+		"StartNode(13)",           // <i>
 		"Print(???)",              // "1"
 		"EndNode(i) - balanced",   // </i>
 		"StartNode(p) - balanced", // <p>

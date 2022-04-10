@@ -44,6 +44,7 @@ type Node struct {
 func (n *Node) Append(tok xml.Token) *Node {
 	newNode := &Node{Token: tok, Parent: n}
 	n.Nodes = append(n.Nodes, newNode)
+
 	return newNode
 }
 
@@ -56,6 +57,7 @@ func (n *Node) MarshalXML(e *xml.Encoder, start xml.StartElement) error {
 			if t, ok := n.Token.(xml.ProcInst); !ok {
 				log.Println(t.Target) // TODO: Why is this here?
 			}
+
 			return err
 		}
 	}
@@ -88,7 +90,6 @@ func (n *Node) Copy(parent *Node) *Node {
 	}
 
 	return res
-
 }
 
 // Parse translates the given xml document to a XML tree.
@@ -107,6 +108,7 @@ func Parse(data []byte) (*Node, error) {
 		if err == io.EOF {
 			break
 		}
+
 		if err != nil {
 			return nil, fmt.Errorf("reading xml token: %w", err)
 		}
@@ -142,7 +144,7 @@ func Walk(root *Node, fn WalkFunc) error {
 func walk(root *Node, fn WalkFunc, depth uint) error {
 	err := fn(root, depth)
 	if err != nil {
-		fmt.Errorf("WalkFunc got: %w", err)
+		return fmt.Errorf("error executing WalkFunc: %w", err)
 	}
 
 	for i := range root.Nodes {

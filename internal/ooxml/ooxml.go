@@ -7,6 +7,7 @@ import (
 	"io/fs"
 	"io/ioutil"
 
+	"github.com/djboris9/rea/internal/utils"
 	"github.com/djboris9/rea/pkg/document"
 	"golang.org/x/exp/slices"
 )
@@ -48,7 +49,7 @@ func (o *OOXML) MIMEType() string {
 	return o.template.MIMEType()
 }
 
-// Opens the given file as fs.File
+// Opens the given file as fs.File.
 func (o *OOXML) Open(name string) (fs.File, error) {
 	return o.template.Open(name)
 }
@@ -66,11 +67,66 @@ func (o *OOXML) Write(w io.Writer, ov document.Overrides) error {
 		ov = document.Overrides{}
 	}
 
-	fd := zip.NewWriter(w)
+	zipWriter := zip.NewWriter(w)
 
 	// Write files from overrides
 	writtenFiles := []string{}
 
+	writtenFiles, err := o.writeOverrides(writtenFiles, ov, zipWriter)
+	if err != nil {
+		return err
+	}
+
+	err = o.writeUntouched(writtenFiles, zipWriter)
+	if err != nil {
+		return fmt.Errorf("error writing untouched files: %w", err)
+	}
+
+	// Finish archive
+	err = zipWriter.Close()
+	if err != nil {
+		return utils.FormatError(document.ErrArchive, fmt.Sprintf("unable to close the archive: %q", err))
+	}
+
+	return nil
+}
+
+func (o *OOXML) writeUntouched(writtenFiles []string, zipWriter *zip.Writer) error {
+	// Write other files from loaded ODF that are not already defined in writtenFiles to skip
+	for _, v := range o.template.GetZipFiles() {
+		// Skip already written files (or just skipped/deleted files)
+		if slices.Contains(writtenFiles, v.Name) {
+			continue
+		}
+
+		// Write file from loaded ODF to new package
+		f, err := zipWriter.Create(v.Name)
+		if err != nil {
+			return utils.FormatError(document.ErrArchive, fmt.Sprintf("unable to recreate file %s from template: %q", v.Name, err))
+		}
+
+		data, err := v.Open()
+		if err != nil {
+			return utils.FormatError(document.ErrArchive, fmt.Sprintf("unable to open file %s from template: %q", v.Name, err))
+		}
+
+		dataBytes, err := ioutil.ReadAll(data)
+		data.Close()
+
+		if err != nil {
+			return utils.FormatError(document.ErrArchive, fmt.Sprintf("unable to read file %s from template: %q", v.Name, err))
+		}
+
+		_, err = f.Write(dataBytes)
+		if err != nil {
+			return utils.FormatError(document.ErrArchive, fmt.Sprintf("unable to write file %s to archive: %q", v.Name, err))
+		}
+	}
+
+	return nil
+}
+
+func (o *OOXML) writeOverrides(writtenFiles []string, ov document.Overrides, zipWriter *zip.Writer) ([]string, error) {
 	for fname, fdata := range ov {
 		writtenFiles = append(writtenFiles, fname)
 
@@ -80,54 +136,19 @@ func (o *OOXML) Write(w io.Writer, ov document.Overrides) error {
 		}
 
 		// Write file
-		f, err := fd.Create(fname)
+		f, err := zipWriter.Create(fname)
 		if err != nil {
-			return fmt.Errorf("creating file %q from override in archive: %q", fname, err)
+			return nil, utils.FormatError(document.ErrOverride,
+				fmt.Sprintf("unable to create file %s fom override in final archive: %q", fname, err))
 		}
 
 		_, err = f.Write(fdata.Data)
 		if err != nil {
-			return fmt.Errorf("writing file %q from override to archive: %q", fname, err)
+			return nil, utils.FormatError(document.ErrOverride, fmt.Sprintf("unable to write file %s fom override in final archive: %q", fname, err))
 		}
 	}
 
-	// Write other files from loaded ODF that are not already defined in writtenFiles to skip
-	for _, v := range o.template.GetZipFiles() {
-		// Skip already written files (or just skipped/deleted files)
-		if slices.Contains(writtenFiles, v.Name) {
-			continue
-		}
-
-		// Write file from loaded ODF to new package
-		f, err := fd.Create(v.Name)
-		if err != nil {
-			return fmt.Errorf("creating file %q in archive: %q", v.Name, err)
-		}
-
-		data, err := v.Open()
-		if err != nil {
-			return fmt.Errorf("opening file %q from source archive: %q", v.Name, err)
-		}
-
-		dataBytes, err := ioutil.ReadAll(data)
-		data.Close()
-		if err != nil {
-			return fmt.Errorf("reading file %q from source archive: %q", v.Name, err)
-		}
-
-		_, err = f.Write(dataBytes)
-		if err != nil {
-			return fmt.Errorf("writing file %q to archive: %q", v.Name, err)
-		}
-	}
-
-	// Finish archive
-	err := fd.Close()
-	if err != nil {
-		return fmt.Errorf("finishing archive: %q", err)
-	}
-
-	return nil
+	return writtenFiles, nil
 }
 
 // http://officeopenxml.com/anatomyofOOXML.php

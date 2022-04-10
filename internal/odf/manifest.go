@@ -8,6 +8,8 @@ import (
 	"io"
 )
 
+var ErrUpdateRootMediaType = errors.New("couldn't find and update root media-type")
+
 // retypeManifest parses and validates a manifest.xml and sets a new mimetype.
 // If the mimetype couldn't be set, this function returns an error.
 func retypeManifest(b []byte, newType []byte) ([]byte, error) {
@@ -21,6 +23,7 @@ func retypeManifest(b []byte, newType []byte) ([]byte, error) {
 		if err == io.EOF {
 			break
 		}
+
 		if err != nil {
 			return nil, fmt.Errorf("reading xml token: %w", err)
 		}
@@ -34,15 +37,16 @@ func retypeManifest(b []byte, newType []byte) ([]byte, error) {
 			if v.Name.Local == "file-entry" && manifestAttrIsRoot(v) {
 				updated = updated || manifestAttrSetMediaType(v, newType)
 			}
+
 			nodes = append(nodes, tok)
 		default:
 			nodes = append(nodes, tok)
 		}
 	}
 
-	// Check if rewriting occured
+	// Check if rewriting occurred
 	if !updated {
-		return nil, errors.New("couldn't find and update root media-type")
+		return nil, ErrUpdateRootMediaType
 	}
 
 	// Encode XML
@@ -64,7 +68,7 @@ func retypeManifest(b []byte, newType []byte) ([]byte, error) {
 	return buf.Bytes(), nil
 }
 
-// Sets the media-type of the given StartElement if attribute already exists
+// Sets the media-type of the given StartElement if attribute already exists.
 func manifestAttrSetMediaType(e xml.StartElement, t []byte) bool {
 	for i := range e.Attr {
 		if e.Attr[i].Name.Local == "media-type" {

@@ -78,5 +78,11 @@ func (o *Template) SetMIMEType(mimeType string) {
 
 // Opens the given file as fs.File.
 func (o *Template) Open(name string) (fs.File, error) {
-	return o.zipFD.Open(name)
+	file, err := o.zipFD.Open(name)
+
+	if file == nil || err != nil {
+		return nil, fmt.Errorf("error opening %s: %w", name, err)
+	}
+
+	return file, nil
 }

@@ -144,7 +144,7 @@ func Walk(root *Node, fn WalkFunc) error {
 func walk(root *Node, fn WalkFunc, depth uint) error {
 	err := fn(root, depth)
 	if err != nil {
-		return fmt.Errorf("WalkFunc got: %w", err)
+		return fmt.Errorf("error executing WalkFunc: %w", err)
 	}
 
 	for i := range root.Nodes {

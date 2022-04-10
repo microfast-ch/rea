@@ -559,7 +559,7 @@ func TestRenderUnbalancedParentStacks(t *testing.T) {
 		"EndNode(9)",              // </span>
 		"EndNode(11)",             // </p>
 		"SetToken(12)",            // Spaces
-		"StartNode(13)",           //<i>
+		"StartNode(13)",           // <i>
 		"Print(???)",              // "1"
 		"EndNode(i) - balanced",   // </i>
 		"StartNode(p) - balanced", // <p>

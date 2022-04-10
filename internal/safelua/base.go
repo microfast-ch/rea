@@ -53,6 +53,7 @@ func Add(l *lua.State) {
 func next(l *lua.State) int {
 	lua.CheckType(l, 1, lua.TypeTable)
 	l.SetTop(2)
+
 	if l.Next(1) {
 		return 2
 	}
@@ -68,7 +69,8 @@ func pairs(method string, isZero bool, iter lua.Function) lua.Function {
 			lua.CheckType(l, 1, lua.TypeTable) // argument must be a table
 			l.PushGoFunction(iter)             // will return generator,
 			l.PushValue(1)                     // state,
-			if isZero {                        // and initial value
+
+			if isZero { // and initial value
 				l.PushInteger(0)
 			} else {
 				l.PushNil()

@@ -23,6 +23,7 @@ func retypeManifest(b []byte, newType []byte) ([]byte, error) {
 		if err == io.EOF {
 			break
 		}
+
 		if err != nil {
 			return nil, fmt.Errorf("reading xml token: %w", err)
 		}
@@ -67,7 +68,7 @@ func retypeManifest(b []byte, newType []byte) ([]byte, error) {
 	return buf.Bytes(), nil
 }
 
-// Sets the media-type of the given StartElement if attribute already exists
+// Sets the media-type of the given StartElement if attribute already exists.
 func manifestAttrSetMediaType(e xml.StartElement, t []byte) bool {
 	for i := range e.Attr {
 		if e.Attr[i].Name.Local == "media-type" {

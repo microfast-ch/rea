@@ -27,20 +27,24 @@ func validateManifest(b []byte) error {
 		if err == io.EOF {
 			break
 		}
+
 		if err != nil {
 			return fmt.Errorf("reading xml token: %w", err)
 		}
 
 		// Rewrite mimetype
+		// nolint:gocritic
 		switch e := tok.(type) {
 		case xml.StartElement:
 			if hasTypesElement && hasDocumentElement {
 				return nil
 			}
+
 			if e.Name.Local == "Types" && hasCorrextXmlns(e) {
 				hasTypesElement = true
 				continue
 			}
+
 			if e.Name.Local == "Override" && partNameIsDocument(e) {
 				hasDocumentElement = true
 				continue
@@ -70,6 +74,7 @@ func partNameIsDocument(e xml.StartElement) bool {
 		if a.Name.Local == "PartName" && a.Value == "/word/document.xml" {
 			hasDocPart = true
 		}
+
 		if a.Name.Local == "ContentType" && a.Value == MainDocumentContentType {
 			hasCorrectMimeType = true
 		}

@@ -39,10 +39,10 @@ func templateCmdRun(cmd *cobra.Command, args []string) {
 		log.Fatalf("reading debug flag: %s", err)
 	}
 
-	//inputFile, err := cmd.Flags().GetString("input")
-	//if err != nil {
-	//	log.Fatalf("reading input flag: %w", err)
-	//}
+	// inputFile, err := cmd.Flags().GetString("input")
+	// if err != nil {
+	// 	log.Fatalf("reading input flag: %w", err)
+	// }
 
 	outputFile, err := cmd.Flags().GetString("output")
 	if err != nil {

@@ -63,7 +63,7 @@ func (o *Template) Close() error {
 	return nil
 }
 
-// Opens the given file as fs.File
+// Opens the given file as fs.File.
 func (o *Template) GetZipFiles() []*zip.File {
 	return o.zipFD.File
 }
@@ -76,7 +76,7 @@ func (o *Template) SetMIMEType(mimeType string) {
 	o.mimetype = mimeType
 }
 
-// Opens the given file as fs.File
+// Opens the given file as fs.File.
 func (o *Template) Open(name string) (fs.File, error) {
 	return o.zipFD.Open(name)
 }

@@ -108,6 +108,7 @@ func Parse(data []byte) (*Node, error) {
 		if err == io.EOF {
 			break
 		}
+
 		if err != nil {
 			return nil, fmt.Errorf("reading xml token: %w", err)
 		}
@@ -143,7 +144,7 @@ func Walk(root *Node, fn WalkFunc) error {
 func walk(root *Node, fn WalkFunc, depth uint) error {
 	err := fn(root, depth)
 	if err != nil {
-		fmt.Errorf("WalkFunc got: %w", err)
+		return fmt.Errorf("WalkFunc got: %w", err)
 	}
 
 	for i := range root.Nodes {

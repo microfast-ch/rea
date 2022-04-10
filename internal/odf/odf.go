@@ -115,6 +115,7 @@ func (o *Odf) Write(w io.Writer, ov document.Overrides) error {
 
 	// Write mimetype file
 	var mimetype []byte
+
 	if mimeTypeOverride, ok := ov["mimetype"]; ok {
 		if mimeTypeOverride.Delete {
 			return errors.New("mimetype file cannot be deleted in overrides")
@@ -132,7 +133,9 @@ func (o *Odf) Write(w io.Writer, ov document.Overrides) error {
 	if err != nil {
 		return fmt.Errorf("creating mimetype file in archive: %q", err)
 	}
+
 	_, err = f.Write(mimetype)
+
 	if err != nil {
 		return fmt.Errorf("writing mimetype file to archive: %q", err)
 	}
@@ -211,6 +214,7 @@ func (o *Odf) Write(w io.Writer, ov document.Overrides) error {
 
 		dataBytes, err := ioutil.ReadAll(data)
 		data.Close()
+
 		if err != nil {
 			return fmt.Errorf("reading file %q from source archive: %q", v.Name, err)
 		}

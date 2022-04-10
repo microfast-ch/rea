@@ -25,7 +25,7 @@ type LuaEngine struct {
 	nodePathStr []string
 }
 
-// Passed data must be a primitive or a map
+// Passed data must be a primitive or a map.
 type TemplateData struct {
 	Data     map[string]any
 	Metadata map[string]string
@@ -70,7 +70,7 @@ func NewLuaEngine(lt *LuaTree, data *TemplateData) *LuaEngine {
 	return e
 }
 
-// This function is serialized on exec
+// This function is serialized on exec.
 func (e *LuaEngine) Exec() error {
 	e.execLock.Lock() // TODO: We might convert it to sync.Once
 	defer e.execLock.Unlock()
@@ -89,11 +89,11 @@ func (e *LuaEngine) Exec() error {
 	return err
 }
 
-// Can only be called after Exec() has been run
+// Can only be called after Exec() has been run.
 func (e *LuaEngine) WriteXML(w io.Writer) error {
 	enc := xml.NewEncoder(w)
 	for i := range e.nodePath {
-		//if err := EncodeToken(enc, w, e.nodePath[i].Token); err != nil { // Is a custom encoder needed
+		// if err := EncodeToken(enc, w, e.nodePath[i].Token); err != nil { // Is a custom encoder needed
 		if err := enc.EncodeToken(e.nodePath[i].Token); err != nil {
 			return fmt.Errorf("encoding token %d: %w", i, err)
 		}
@@ -107,12 +107,12 @@ func (e *LuaEngine) WriteXML(w io.Writer) error {
 	return nil
 }
 
-// Can only be called after Exec() has been run
+// Can only be called after Exec() has been run.
 func (e *LuaEngine) GetNodePath() []*xmltree.Node {
 	return e.nodePath
 }
 
-// Can only be called after Exec() has been run
+// Can only be called after Exec() has been run.
 func (e *LuaEngine) GetNodePathString() []string {
 	return e.nodePathStr
 }
@@ -152,29 +152,29 @@ func (e *LuaEngine) iEndNode(state *lua.State) int {
 }
 
 func (e *LuaEngine) iSetToken(state *lua.State) int {
-	nodeId := lua.CheckInteger(state, -1)
-	node := e.lt.NodeList[nodeId]
+	nodeID := lua.CheckInteger(state, -1)
+	node := e.lt.NodeList[nodeID]
 
 	// Fill tree, before we are added to the path
 	e.fillTree(node)
 
 	// Append node to the nodePath
 	e.nodePath = append(e.nodePath, node)
-	e.nodePathStr = append(e.nodePathStr, fmt.Sprintf("SetToken(%d)", nodeId))
+	e.nodePathStr = append(e.nodePathStr, fmt.Sprintf("SetToken(%d)", nodeID))
 
 	return 0
 }
 
 func (e *LuaEngine) iCharData(state *lua.State) int {
-	nodeId := lua.CheckInteger(state, -1)
-	node := e.lt.NodeList[nodeId]
+	nodeID := lua.CheckInteger(state, -1)
+	node := e.lt.NodeList[nodeID]
 
 	// Fill tree, before we are added to the path
 	e.fillTree(node)
 
 	// Append node to the nodePath
 	e.nodePath = append(e.nodePath, node)
-	e.nodePathStr = append(e.nodePathStr, fmt.Sprintf("CharData(%d)", nodeId))
+	e.nodePathStr = append(e.nodePathStr, fmt.Sprintf("CharData(%d)", nodeID))
 
 	return 0
 }
@@ -191,10 +191,12 @@ func (e *LuaEngine) iPrint(state *lua.State) int {
 		state.PushValue(i)  // value to print
 		state.Call(1, 1)
 		s, ok := state.ToString(-1)
+
 		if !ok {
 			lua.Errorf(state, "'tostring' must return a string to 'print'")
 			panic("unreachable")
 		}
+
 		if i > 1 {
 			sc.WriteString("\t")
 		}
@@ -322,7 +324,7 @@ nodeLoop:
 	return leftTree, commonParent, rightTree
 }
 
-// reverseNodes reverses xmltree.Node slices
+// reverseNodes reverses xmltree.Node slices.
 func reverseNodes(nodes []*xmltree.Node) {
 	for i, j := 0, len(nodes)-1; i < j; i, j = i+1, j-1 {
 		nodes[i], nodes[j] = nodes[j], nodes[i]

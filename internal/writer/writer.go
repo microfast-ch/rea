@@ -40,24 +40,29 @@ func Write(tmpl document.PackagedDocument, config *TemplateConfig, out io.Writer
 	if err != nil {
 		return tpd, fmt.Errorf("parsing content.xml as tree: %w", err)
 	}
-	tpd.TemplateXMLTree = tree
 
+	tpd.TemplateXMLTree = tree
 	lt, err := engine.NewLuaTree(tree)
+
 	if err != nil {
 		return tpd, fmt.Errorf("creating lua tree from content.xml: %w", err)
 	}
+
 	tpd.TemplateLuaProg = lt.LuaProg
 	tpd.TemplateLuaNodeList = lt.NodeList
 
 	e := engine.NewLuaEngine(lt, nil)
 	err = e.Exec()
+
 	if err != nil {
 		return tpd, fmt.Errorf("executing lua engine: %w", err)
 	}
+
 	tpd.LuaNodePathStr = e.GetNodePathString()
 
 	var buf strings.Builder
 	err = e.WriteXML(&buf)
+
 	if err != nil {
 		return tpd, fmt.Errorf("writing executed template: %w", err)
 	}
@@ -76,6 +81,7 @@ func Write(tmpl document.PackagedDocument, config *TemplateConfig, out io.Writer
 		},
 	}
 	err = tmpl.Write(out, ov)
+
 	if err != nil {
 		return tpd, fmt.Errorf("writing rendered template: %w", err)
 	}

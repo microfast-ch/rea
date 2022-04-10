@@ -35,6 +35,7 @@ func EncodeToken(e *xml.Encoder, buf io.Writer, t xml.Token) error {
 		return nil
 	case xml.EndElement:
 		e.Flush() // Flush data from encoder, to write to the right location
+
 		if v.Name.Space == "" {
 			fmt.Fprintf(buf, "</%s>", v.Name.Local)
 		} else {
@@ -49,6 +50,7 @@ func EncodeToken(e *xml.Encoder, buf io.Writer, t xml.Token) error {
 
 func writeStartElement(buf *bufio.Writer, start xml.StartElement) {
 	buf.WriteByte('<')
+
 	if start.Name.Space != "" {
 		buf.WriteString(start.Name.Space)
 		buf.WriteByte(':')
@@ -62,11 +64,14 @@ func writeStartElement(buf *bufio.Writer, start xml.StartElement) {
 		if name.Local == "" {
 			continue
 		}
+
 		buf.WriteByte(' ')
+
 		if name.Space != "" {
 			buf.WriteString(name.Space)
 			buf.WriteByte(':')
 		}
+
 		buf.WriteString(name.Local)
 		buf.WriteString(`="`)
 		// p.EscapeString(attr.Value) // TODO: Is the lower line equivalent to the current line?

@@ -25,6 +25,7 @@ func prepareLua(t *testing.T, testdata string) (*LuaEngine, error) {
 
 	e := NewLuaEngine(lt, nil)
 	err = e.Exec()
+
 	if err != nil {
 		t.Errorf("executing lua engine: %s", err)
 	}
@@ -177,6 +178,7 @@ func TestRenderLoopBlock(t *testing.T) {
   </ul>
 </p>`
 	e, err := prepareLua(t, testdata)
+
 	if err != nil {
 		t.Error(err)
 	}
@@ -363,8 +365,8 @@ func TestRenderLoopSpanned(t *testing.T) {
 	}
 }
 
-// TODO: Change to e.WriteXML
 func serializeNodePath(t *testing.T, nodePath []*xmltree.Node) string {
+	// TODO: Change to e.WriteXML
 	var buf strings.Builder
 	enc := xml.NewEncoder(&buf)
 
@@ -413,12 +415,15 @@ func TestGetCommonPaths(t *testing.T) {
 	}
 
 	lT, cP, rT := getCommonPaths(nodeA, nil)
+
 	if diff := cmp.Diff([]*xmltree.Node{}, lT); diff != "" {
 		t.Errorf("getCommonPaths(nodeA, nil).lT mismatch (-want +got):\n%s", diff)
 	}
+
 	if diff := cmp.Diff((*xmltree.Node)(nil), cP); diff != "" {
 		t.Errorf("getCommonPaths(nodeA, nil).cP mismatch (-want +got):\n%s", diff)
 	}
+
 	if diff := cmp.Diff([]*xmltree.Node{}, rT); diff != "" {
 		t.Errorf("getCommonPaths(nodeA, nil).rT mismatch (-want +got):\n%s", diff)
 	}
@@ -427,12 +432,15 @@ func TestGetCommonPaths(t *testing.T) {
 
 	stack := []*xmltree.Node{nodeA, nodeB, nodeC, nodeD, nodeE}
 	lT, cP, rT = getCommonPaths(nodeZ, stack)
+
 	if diff := cmp.Diff([]*xmltree.Node{nodeX, nodeY}, lT, opt); diff != "" {
 		t.Errorf("getCommonPaths(nodeZ, stack).lT mismatch (-want +got):\n%s", diff)
 	}
+
 	if diff := cmp.Diff(nodeB, cP); diff != "" {
 		t.Errorf("getCommonPaths(nodeZ, stack).cP mismatch (-want +got):\n%s", diff)
 	}
+
 	if diff := cmp.Diff([]*xmltree.Node{nodeC, nodeD, nodeE}, rT, opt); diff != "" {
 		t.Errorf("getCommonPaths(nodeZ, stack).rT mismatch (-want +got):\n%s", diff)
 	}

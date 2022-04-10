@@ -48,7 +48,7 @@ func (o *OOXML) MIMEType() string {
 	return o.template.MIMEType()
 }
 
-// Opens the given file as fs.File
+// Opens the given file as fs.File.
 func (o *OOXML) Open(name string) (fs.File, error) {
 	return o.template.Open(name)
 }
@@ -111,6 +111,7 @@ func (o *OOXML) Write(w io.Writer, ov document.Overrides) error {
 
 		dataBytes, err := ioutil.ReadAll(data)
 		data.Close()
+
 		if err != nil {
 			return fmt.Errorf("reading file %q from source archive: %q", v.Name, err)
 		}

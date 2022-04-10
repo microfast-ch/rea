@@ -79,7 +79,7 @@ func serializeNodePathCustom(t *testing.T, nodePath []*xmltree.Node) string {
 	return buf.String()
 }
 
-// testDocLarge is a real OpenDocument content.xml
+// testDocLarge is a real OpenDocument content.xml.
 const testDocLarge = `<?xml version="1.0" encoding="UTF-8"?>
   <office:body>
     <office:text>

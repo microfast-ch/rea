@@ -236,7 +236,6 @@ func (e *LuaEngine) fillTree(newNode *xmltree.Node) {
 	// EndElements are children of the StartElement/parent.
 	// This means we are still on the same depth and can safely return here.
 	if newNode.Parent == previousNode.Parent {
-		// TODO: Handle when parent is nil or e.nodePath empty (for the first node only)
 		return
 	}
 
@@ -245,7 +244,7 @@ func (e *LuaEngine) fillTree(newNode *xmltree.Node) {
 		return
 	}
 
-	// Does or stack match? This happens when we are the next node after an EndNode
+	// Does our stack match? This happens when we are the next node after an EndNode
 	if newNode.Parent == lastStack {
 		return
 	}
@@ -253,10 +252,33 @@ func (e *LuaEngine) fillTree(newNode *xmltree.Node) {
 	// Okk, now we have to work. The stack doesn't match the stack the newNode
 	// expected.
 
-	// 1. Get trees to the common parent
+	// Get trees to the common parent
 	leftTree, _, rightTree := getCommonPaths(newNode, e.parentStack)
 
-	// 2. Add all EndNodes from the current stack till the root (rightTree) in reverse order
+	// Now handle the special case where we have excessive tags in simple logic blocks.
+	// This is a heuristic to render the following block to `<body><p></p></body>` instead of `<body><p></p><p></p></body>`.
+	//   <body><p>[[ if false then ]]</p><p>Hello</p><p>[[ end ]]</p></body>
+	// It prevents inserting of balancing nodes if the newNode will establish the balance anyways.
+	// Such simple blocks need to have only one level to balance and the nextToken must match the to-be-balanced nodes.
+	if len(leftTree) == 1 && len(rightTree) == 1 {
+		leftToken := leftTree[0].Token.(xml.StartElement).Name.Local
+		rightToken := rightTree[0].Token.(xml.StartElement).Name.Local // This would be converted to an EndElement in balancing
+
+		// The nextToken needs to be an EndElement to stay in balance
+		nextToken, ok := newNode.Token.(xml.EndElement)
+
+		if ok &&
+			leftToken == rightToken &&
+			leftToken == nextToken.Name.Local {
+
+			// We got a match and have a group of same to-be-balanced nodes and the nextToken
+			// fits into this scheme like `</a><a></a>`
+			return
+		}
+	}
+
+	// Add all EndNodes from the current stack till the root (rightTree) in reverse order.
+	// This closes every node we started so we can create new nodes and stay in balance.
 	tmpParent := lastStack
 
 	for revIdx := range rightTree {
@@ -274,7 +296,9 @@ func (e *LuaEngine) fillTree(newNode *xmltree.Node) {
 		e.parentStack = e.parentStack[:len(e.parentStack)-1]
 	}
 
-	// 3. Add all StartNodes for the newNode stack till the root (leftTree)
+	// Add all StartNodes for the newNode stack till the root (leftTree).
+	// This reconstructs our parent path so we will stay on the same level as before
+	// and can proceed with the execution.
 	e.nodePath = append(e.nodePath, leftTree...)
 	for i := range leftTree {
 		e.nodePathStr = append(e.nodePathStr, fmt.Sprintf("StartNode(%s) - balanced", leftTree[i].Token.(xml.StartElement).Name.Local))

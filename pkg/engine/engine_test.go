@@ -677,8 +677,8 @@ func TestHandleExcessiveTokens(t *testing.T) {
 		"StartNode(3)", // <body>
 		"SetToken(4)",  // Spaces
 		"StartNode(5)", // <p>
-		//"EndNode(p) - balanced", // These tokens shouldn't be rendered
-		//"StartNode(p) - balanced", // These tokens shouldn't be rendered
+		// "EndNode(p) - balanced", // These tokens shouldn't be rendered
+		// "StartNode(p) - balanced", // These tokens shouldn't be rendered
 		"EndNode(15)",  // </p>
 		"SetToken(16)", // Spaces
 		"EndNode(17)",  // </body>

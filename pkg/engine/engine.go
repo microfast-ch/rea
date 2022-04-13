@@ -223,6 +223,7 @@ func (e *LuaEngine) iPrint(state *lua.State) int {
 // the tags parent tags up to it on the old branch. Then it opens all start tags of the new
 // branch so the new tag can be added.
 // This needs to be called before the node is added to the path.
+// nolint:funlen
 func (e *LuaEngine) fillTree(newNode *xmltree.Node) {
 	// We are the root or are somehow detached. No balancing possible.
 	if newNode.Parent == nil || len(e.parentStack) == 0 {
@@ -266,11 +267,7 @@ func (e *LuaEngine) fillTree(newNode *xmltree.Node) {
 
 		// The nextToken needs to be an EndElement to stay in balance
 		nextToken, ok := newNode.Token.(xml.EndElement)
-
-		if ok &&
-			leftToken == rightToken &&
-			leftToken == nextToken.Name.Local {
-
+		if ok && leftToken == rightToken && leftToken == nextToken.Name.Local {
 			// We got a match and have a group of same to-be-balanced nodes and the nextToken
 			// fits into this scheme like `</a><a></a>`
 			return

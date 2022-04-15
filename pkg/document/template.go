@@ -17,6 +17,7 @@ type PackagedDocument interface {
 	Open(name string) (fs.File, error)
 	ValidateAndSetMIMEType() error
 	Write(w io.Writer, ov Overrides) error
+	InitScript() string
 }
 
 type Template struct {

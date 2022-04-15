@@ -10,6 +10,7 @@ import (
 	"github.com/Shopify/go-lua"
 	"github.com/djboris9/rea/internal/safelua"
 	"github.com/djboris9/rea/pkg/xmltree"
+	"golang.org/x/exp/slices"
 
 	goluagoUtil "github.com/Shopify/goluago/util"
 )
@@ -23,6 +24,13 @@ type LuaEngine struct {
 	nodePath    []*xmltree.Node
 	parentStack []*xmltree.Node // stack of StartNode elements to keep the balance
 	nodePathStr []string
+
+	// Counts how many times the function at the line of code was executed.
+	// This is needed to keep track for the iteration target.
+	reachcounter *reachcounter
+
+	// List of xml node names that act as the origin of iterations
+	iterationNodes []string
 }
 
 // Passed data must be a primitive or a map.
@@ -34,19 +42,21 @@ type TemplateData struct {
 func NewLuaEngine(lt *LuaTree, data *TemplateData) *LuaEngine {
 	// Initialize lua
 	l := lua.NewState()
-	// lua.BaseOpen(l)
+	// lua.BaseOpen(l) // This should be uncommented for debugging purposes only
 
 	e := &LuaEngine{
-		lt:       lt,
-		luaState: l,
+		lt:           lt,
+		luaState:     l,
+		reachcounter: newReachCounter(),
 	}
 
 	// Map our Go functions to lua
-	l.Register("SetToken", e.iSetToken)
-	l.Register("StartNode", e.iStartNode)
-	l.Register("EndNode", e.iEndNode)
-	l.Register("CharData", e.iCharData)
-	l.Register("Print", e.iPrint)
+	l.Register("SetToken", e.handleIterations(e.iSetToken))
+	l.Register("StartNode", e.handleIterations(e.iStartNode))
+	l.Register("EndNode", e.handleIterations(e.iEndNode))
+	l.Register("CharData", e.handleIterations(e.iCharData))
+	l.Register("Print", e.handleIterations(e.iPrint))
+	l.Register("SetIterationNodes", e.iSetIterationNodes)
 
 	// Inject data into the lua stack
 	if data != nil {
@@ -71,7 +81,7 @@ func NewLuaEngine(lt *LuaTree, data *TemplateData) *LuaEngine {
 }
 
 // This function is serialized on exec.
-func (e *LuaEngine) Exec() error {
+func (e *LuaEngine) Exec(initFunc string) error {
 	e.execLock.Lock() // TODO: We might convert it to sync.Once
 	defer e.execLock.Unlock()
 
@@ -79,8 +89,15 @@ func (e *LuaEngine) Exec() error {
 	e.nodePath = []*xmltree.Node{}
 	e.nodePathStr = []string{}
 
+	// Execute initialization function
+	err := lua.DoString(e.luaState, initFunc)
+	if err != nil {
+		// We got an error, but the detailed error message is on the stack. Wrap it.
+		return fmt.Errorf("executing init lua prog got %w with :%s", err, lua.CheckString(e.luaState, -1))
+	}
+
 	// Execute lua program
-	err := lua.DoString(e.luaState, e.lt.LuaProg)
+	err = lua.DoString(e.luaState, e.lt.LuaProg)
 	if err != nil {
 		// We got an error, but the detailed error message is on the stack. Wrap it.
 		return fmt.Errorf("executing lua prog got %w with :%s", err, lua.CheckString(e.luaState, -1))
@@ -216,6 +233,95 @@ func (e *LuaEngine) iPrint(state *lua.State) int {
 	e.nodePath = append(e.nodePath, node)
 
 	return 0
+}
+
+func (e *LuaEngine) iSetIterationNodes(state *lua.State) int {
+	// Extract string array from first argument, which is a table
+	idx := state.AbsIndex(-1)
+	args := make([]string, lua.LengthEx(state, idx))
+
+	state.PushNil()
+
+	for state.Next(idx) {
+		k, ok := state.ToInteger(-2)
+		if !ok {
+			lua.Errorf(state, "SetIterationNodes cannot process numeric index, got: %s", state.TypeOf(-2))
+			panic("unreachable")
+		}
+
+		args[k-1] = lua.CheckString(state, -1)
+		state.Pop(1)
+	}
+
+	// Set new iteration nodes
+	e.SetIterationNodes(args)
+
+	return 0
+}
+
+// SetIterationNodes updates the list of node names that act as an iteration origin.
+func (e *LuaEngine) SetIterationNodes(nodes []string) {
+	e.iterationNodes = nodes
+}
+
+// handleIterations is a middleware for handling iterations. It detects if we
+// need to reconstruct XML parents from the iteration origin up to the current node.
+// This function needs to be called before processing elements that have an impact
+// on the resulting nodePath structure.
+func (e *LuaEngine) handleIterations(next lua.Function) lua.Function {
+	return func(state *lua.State) int {
+		wasPrevious := e.countCall(state)
+
+		// If we are processing this node for the first time, just continue
+		if !wasPrevious {
+			return next(state)
+		}
+
+		// We already saw this node. So check if we have an iteration origin in the parent tree
+		lastNode := e.nodePath[len(e.nodePath)-1]
+		var iterOrigin *xmltree.Node
+
+		for parent := lastNode.Parent; parent.Token != nil; parent = parent.Parent {
+			elem := parent.Token.(xml.StartElement)
+			if slices.Contains(e.iterationNodes, elem.Name.Local) {
+				iterOrigin = parent
+			}
+		}
+
+		// If we haven't found an iterOrigin, we are not in an iteration context
+		if iterOrigin == nil {
+			return next(state)
+		}
+
+		// Rebalance tree up to the iterTarget. The next function will rebalance
+		// it again down to the new node.
+		e.fillTree(iterOrigin)
+
+		// Clean counter and add current node to it, as it will be rendered
+		e.reachcounter.Clean()
+		e.countCall(state)
+
+		return next(state)
+	}
+}
+
+// countCall records the execution of the current line and returns true if this
+// function was already called at least one time at the current source line.
+// TODO: If the function is defined two times at the same line, it currently
+// cannot distinguish it.
+func (e *LuaEngine) countCall(state *lua.State) bool {
+	lua.Where(state, 1)
+
+	s, ok := state.ToString(-1)
+	if !ok {
+		panic("invalid lua state reached in countCall")
+	}
+
+	state.Pop(1)
+
+	i := e.reachcounter.Add(s)
+
+	return i != 0
 }
 
 // On each node this function is called. It checks if the new node has the same

@@ -102,6 +102,11 @@ func (o *Odf) ValidateAndSetMIMEType() error {
 	return nil
 }
 
+func (o *Odf) InitScript() string {
+	// Configures iteration nodes for list and table rows
+	return "-- ODF Init Script\nSetIterationNodes({\"list-item\", \"table-row\"})"
+}
+
 // Writes an ODF package to the given writer. It will use the loaded ODF contents
 // as base and incorporate the overrides. It handles the mimetype and manifest.xml.
 func (o *Odf) Write(w io.Writer, ov document.Overrides) error {

@@ -49,6 +49,12 @@ func (o *OOXML) MIMEType() string {
 	return o.template.MIMEType()
 }
 
+func (o *OOXML) InitScript() string {
+	// Configures iteration nodes for table rows
+	// TODO: Lists
+	return "-- OOXML Init Script\nSetIterationNodes({\"tr\"})"
+}
+
 // Opens the given file as fs.File.
 func (o *OOXML) Open(name string) (fs.File, error) {
 	return o.template.Open(name)

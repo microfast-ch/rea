@@ -97,6 +97,7 @@ func templateCmdRun(cmd *cobra.Command, args []string) {
 
 	if bundleW != nil && tpd != nil {
 		bundleW.AddTemplateMimeType(tpd.TemplateMimeType)
+		bundleW.AddInitScript(tpd.TemplateInitScript)
 		bundleW.AddLuaProg(tpd.TemplateLuaProg)
 		bundleW.AddLuaNodeList(tpd.TemplateLuaNodeList)
 		bundleW.AddTemplateXMLTree(tpd.TemplateXMLTree)

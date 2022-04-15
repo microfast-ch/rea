@@ -42,6 +42,13 @@ func (b *Writer) AddLuaProg(luaProg string) {
 	}
 }
 
+func (b *Writer) AddInitScript(script string) {
+	err := b.writeFile("template/init.lua", script)
+	if err != nil {
+		log.Fatalf("error: unable to write init script: %s", err)
+	}
+}
+
 func (b *Writer) AddLuaNodeList(nodeList []*xmltree.Node) {
 	buf := &strings.Builder{}
 	for i := range nodeList {

@@ -66,9 +66,6 @@ rea template -t examples/letter.odt -m examples/letter.yaml -o my-document.odt
 You will get a `my-document.odt` that looks like this:
 ![A rea document that was rendered](doc/readme-rendered.png)
 
-*Note: Currently there is an issue and you will most likely get unwanted paragraphs/newlines
-on the rendering result. We will surpress this and simplify the loop command too.*
-
 #### Creating a template
 As seen in the previous example, you can use Lua code between the `[[ foo ]]` blocks directly.
 Everything is executed in the same scope unless you create scopes by yourself. This
@@ -117,14 +114,12 @@ Flags:
 ```
 
 We currently support ODF and OOXML text files.
-For ODF files the input can be the text `.odf` or the template `.ott` format,
-the result will be a `.odf` file in both cases.
+For ODF files the input can be the text `.odf` or the template `.ott` format, the result will be a `.odf` file in both cases.
 For OOXML the input file needs to be a `.docx` and the output file will be a `.docx` aswell.
 
 ## Future work
 As you may notice, this project is still in development. The following points
 are nasty and will be improved soon:
 
-- Creation of excessive linebreaks/paragraphs especially in loops will be mitigated
 - The looping syntax will be simplified
 - We will introduce some preprocessing macros (not the ones which you know from documents) to simplify syntax elements

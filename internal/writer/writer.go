@@ -9,7 +9,7 @@ import (
 	"github.com/djboris9/rea/internal/utils"
 	"github.com/djboris9/rea/pkg/document"
 	"github.com/djboris9/rea/pkg/engine"
-	"github.com/djboris9/rea/pkg/xmltree"
+	"github.com/djboris9/xmltree"
 )
 
 // Opens, reads and return the content.xml as XML node.

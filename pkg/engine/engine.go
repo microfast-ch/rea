@@ -9,7 +9,7 @@ import (
 
 	"github.com/Shopify/go-lua"
 	"github.com/djboris9/rea/internal/safelua"
-	"github.com/djboris9/rea/pkg/xmltree"
+	"github.com/djboris9/xmltree"
 	"golang.org/x/exp/slices"
 
 	goluagoUtil "github.com/Shopify/goluago/util"

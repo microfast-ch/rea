@@ -9,6 +9,7 @@ require (
 
 require (
 	github.com/Shopify/goluago v0.0.0-20210621135517-fe0528d0b204 // indirect
+	github.com/djboris9/xmltree v0.0.0-20220419153310-7195f31abe9c // indirect
 	github.com/google/go-cmp v0.5.7 // indirect
 	github.com/inconshreveable/mousetrap v1.0.0 // indirect
 	github.com/pmezard/go-difflib v1.0.0 // indirect

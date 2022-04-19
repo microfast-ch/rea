@@ -4,7 +4,7 @@ import (
 	"encoding/xml"
 	"testing"
 
-	"github.com/djboris9/rea/pkg/xmltree"
+	"github.com/djboris9/xmltree"
 	"github.com/google/go-cmp/cmp"
 )
 

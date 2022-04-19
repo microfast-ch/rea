@@ -9,7 +9,7 @@ import (
 	"sync"
 
 	"github.com/djboris9/rea/internal/utils"
-	"github.com/djboris9/rea/pkg/xmltree"
+	"github.com/djboris9/xmltree"
 )
 
 var ErrLuaTree = errors.New("luaTreeErr")

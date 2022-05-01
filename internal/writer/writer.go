@@ -6,10 +6,10 @@ import (
 	"io/ioutil"
 	"strings"
 
+	"github.com/djboris9/xmltree"
 	"github.com/microfast-ch/rea/internal/document"
 	"github.com/microfast-ch/rea/internal/engine"
 	"github.com/microfast-ch/rea/internal/utils"
-	"github.com/djboris9/xmltree"
 )
 
 // Opens, reads and return the content.xml as XML node.

@@ -8,8 +8,8 @@ import (
 	"sync"
 
 	"github.com/Shopify/go-lua"
-	"github.com/microfast-ch/rea/internal/safelua"
 	"github.com/djboris9/xmltree"
+	"github.com/microfast-ch/rea/internal/safelua"
 	"golang.org/x/exp/slices"
 
 	goluagoUtil "github.com/Shopify/goluago/util"

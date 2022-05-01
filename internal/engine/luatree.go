@@ -8,8 +8,8 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/microfast-ch/rea/internal/utils"
 	"github.com/djboris9/xmltree"
+	"github.com/microfast-ch/rea/internal/utils"
 )
 
 var ErrLuaTree = errors.New("luaTreeErr")

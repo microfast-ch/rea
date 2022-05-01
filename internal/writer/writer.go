@@ -6,9 +6,9 @@ import (
 	"io/ioutil"
 	"strings"
 
+	"github.com/djboris9/rea/internal/document"
+	"github.com/djboris9/rea/internal/engine"
 	"github.com/djboris9/rea/internal/utils"
-	"github.com/djboris9/rea/pkg/document"
-	"github.com/djboris9/rea/pkg/engine"
 	"github.com/djboris9/xmltree"
 )
 

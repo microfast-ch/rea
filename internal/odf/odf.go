@@ -8,8 +8,8 @@ import (
 	"io/ioutil"
 	"strings"
 
+	"github.com/djboris9/rea/internal/document"
 	"github.com/djboris9/rea/internal/utils"
-	"github.com/djboris9/rea/pkg/document"
 	"golang.org/x/exp/slices"
 )
 

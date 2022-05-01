@@ -7,8 +7,8 @@ import (
 	"io/fs"
 	"io/ioutil"
 
+	"github.com/djboris9/rea/internal/document"
 	"github.com/djboris9/rea/internal/utils"
-	"github.com/djboris9/rea/pkg/document"
 	"golang.org/x/exp/slices"
 )
 

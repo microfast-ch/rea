@@ -6,8 +6,7 @@ import (
 	"log"
 	"os"
 
-	"github.com/microfast-ch/rea/internal/factory"
-	"github.com/microfast-ch/rea/internal/writer"
+	"github.com/microfast-ch/rea/internal/document"
 	"github.com/microfast-ch/rea/pkg/bundle"
 	"github.com/spf13/cobra"
 	"gopkg.in/yaml.v3"
@@ -55,7 +54,7 @@ func templateCmdRun(cmd *cobra.Command, args []string) {
 
 	outputBuf := bufio.NewWriter(output)
 
-	docTemplate, err := factory.NewFromFile(tmplFile)
+	docTemplate, err := document.NewFromFile(tmplFile)
 	if err != nil {
 		log.Fatalf("error loading template file %s: %v", tmplFile, err)
 	}
@@ -82,7 +81,7 @@ func templateCmdRun(cmd *cobra.Command, args []string) {
 		log.Fatalf("reading model file: %v", err)
 	}
 
-	var model writer.Model
+	var model document.Model
 	err = yaml.Unmarshal(yamlFile, &model)
 
 	if err != nil {
@@ -90,7 +89,7 @@ func templateCmdRun(cmd *cobra.Command, args []string) {
 	}
 
 	// Run rendering and first write bundle before throwing error
-	tpd, err := writer.Write(docTemplate, &model, outputBuf) // TODO: data
+	tpd, err := docTemplate.Write(&model, outputBuf)
 	if err != nil {
 		log.Fatalf("executing templating: %s", err)
 	}
@@ -101,8 +100,8 @@ func templateCmdRun(cmd *cobra.Command, args []string) {
 		bundleW.AddLuaProg(tpd.TemplateLuaProg)
 		bundleW.AddLuaNodeList(tpd.TemplateLuaNodeList)
 		bundleW.AddTemplateXMLTree(tpd.TemplateXMLTree)
-		bundleW.AddLuaNodePathStr(tpd.LuaNodePathStr)
-		bundleW.AddContentXML(tpd.ContentXML)
+		bundleW.AddLuaExecTrace(tpd.LuaExecTrace)
+		bundleW.AddXMLResult(tpd.XMLResult)
 
 		if errB := bundleW.Close(); errB != nil {
 			log.Printf("closing bundle writer: %s", errB)

@@ -68,17 +68,17 @@ func (b *Writer) AddTemplateXMLTree(tree *xmltree.Node) {
 	}
 }
 
-func (b *Writer) AddContentXML(doc string) {
+func (b *Writer) AddXMLResult(doc string) {
 	err := b.writeFile("processed/content.xml", doc)
 	if err != nil {
 		log.Fatalf("error: unable to write content.xml: %s", err)
 	}
 }
 
-func (b *Writer) AddLuaNodePathStr(nodePath []string) {
-	err := b.writeFile("processed/nodepath.lua", strings.Join(nodePath, "\n"))
+func (b *Writer) AddLuaExecTrace(nodePath []string) {
+	err := b.writeFile("processed/exec_trace.lua", strings.Join(nodePath, "\n"))
 	if err != nil {
-		log.Fatalf("error: unable to write notepath.lua: %s", err)
+		log.Fatalf("error: unable to write exec_trace.lua: %s", err)
 	}
 }
 

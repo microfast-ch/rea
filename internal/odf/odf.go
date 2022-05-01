@@ -2,30 +2,42 @@ package odf
 
 import (
 	"archive/zip"
+	"errors"
 	"fmt"
 	"io"
 	"io/fs"
 	"io/ioutil"
 	"strings"
 
-	"github.com/microfast-ch/rea/internal/document"
 	"github.com/microfast-ch/rea/internal/utils"
 	"golang.org/x/exp/slices"
 )
 
+// TODO: Improve text.
+var ErrMimetype = errors.New("mimetypeErr")
+var ErrOverride = errors.New("overrideErr")
+var ErrArchive = errors.New("archiveErr")
+
 type Odf struct {
-	template *document.Template
+	zipFD       *zip.Reader
+	zipFDCloser io.Closer
+	mimetype    string
 }
 
 // NewFromFile returns a new ODF instance for the given document file path.
 // The file is validated to be a valid ODF package but no content or structure is processed.
 func NewFromFile(path string) (*Odf, error) {
-	template, err := document.NewFromFile(path)
+	rc, err := zip.OpenReader(path)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("error opening file %s: %w", path, err)
 	}
 
-	odf := &Odf{template: template}
+	odf := &Odf{
+		zipFD:       &rc.Reader,
+		zipFDCloser: rc,
+		mimetype:    "",
+	}
+
 	err = odf.ValidateAndSetMIMEType()
 
 	return odf, err
@@ -34,27 +46,41 @@ func NewFromFile(path string) (*Odf, error) {
 // NewTemplate returns an ODF instance for the given document with the given size.
 // The file is validated to be a valid ODF package but no content or structure is processed.
 func New(doc io.ReaderAt, size int64) (*Odf, error) {
-	template, err := document.NewTemplate(doc, size)
+	rdr, err := zip.NewReader(doc, size)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("creating ODF reader: %w", err)
 	}
 
-	odf := &Odf{template: template}
+	odf := &Odf{
+		zipFD:    rdr,
+		mimetype: "",
+	}
+
 	err = odf.ValidateAndSetMIMEType()
 
 	return odf, err
 }
 
 func (o *Odf) MIMEType() string {
-	return o.template.MIMEType()
+	return o.mimetype
 }
 
 func (o *Odf) Open(name string) (fs.File, error) {
-	return o.template.Open(name)
+	file, err := o.zipFD.Open(name)
+
+	if file == nil || err != nil {
+		return nil, fmt.Errorf("error opening %s: %w", name, err)
+	}
+
+	return file, nil
 }
 
 func (o *Odf) Close() error {
-	return o.template.Close()
+	if o.zipFDCloser != nil {
+		return o.zipFDCloser.Close()
+	}
+
+	return nil
 }
 
 // https://docs.oasis-open.org/office/OpenDocument/v1.3/os/part2-packages/OpenDocument-v1.3-os-part2-packages.pdf
@@ -94,10 +120,10 @@ func (o *Odf) ValidateAndSetMIMEType() error {
 
 	// https://www.iana.org/assignments/media-types/media-types.xhtml
 	if !strings.HasPrefix(mimetype, "application/vnd.oasis.opendocument.") {
-		return utils.FormatError(document.ErrMimetype, fmt.Sprintf("%s not an OpenDocument file", mimetype))
+		return utils.FormatError(ErrMimetype, fmt.Sprintf("%s not an OpenDocument file", mimetype))
 	}
 
-	o.template.SetMIMEType(mimetype)
+	o.mimetype = mimetype
 
 	return nil
 }
@@ -109,9 +135,9 @@ func (o *Odf) InitScript() string {
 
 // Writes an ODF package to the given writer. It will use the loaded ODF contents
 // as base and incorporate the overrides. It handles the mimetype and manifest.xml.
-func (o *Odf) Write(w io.Writer, ov document.Overrides) error {
+func (o *Odf) Write(w io.Writer, ov Overrides) error {
 	if ov == nil {
-		ov = document.Overrides{}
+		ov = Overrides{}
 	}
 
 	zipWriter := zip.NewWriter(w)
@@ -141,18 +167,18 @@ func (o *Odf) Write(w io.Writer, ov document.Overrides) error {
 	return nil
 }
 
-func (o *Odf) writeMimetype(ov document.Overrides, zipWriter *zip.Writer) ([]string, error) {
+func (o *Odf) writeMimetype(ov Overrides, zipWriter *zip.Writer) ([]string, error) {
 	// Write mimetype file
 	var mimetype []byte
 
 	if mimeTypeOverride, ok := ov["mimetype"]; ok {
 		if mimeTypeOverride.Delete {
-			return nil, utils.FormatError(document.ErrMimetype, "unable to delete mimetype for final archive")
+			return nil, utils.FormatError(ErrMimetype, "unable to delete mimetype for final archive")
 		}
 
 		mimetype = mimeTypeOverride.Data
 	} else {
-		mimetype = []byte(o.template.MIMEType())
+		mimetype = []byte(o.MIMEType())
 	}
 
 	f, err := zipWriter.CreateHeader(&zip.FileHeader{
@@ -160,13 +186,12 @@ func (o *Odf) writeMimetype(ov document.Overrides, zipWriter *zip.Writer) ([]str
 		Method: zip.Store, // The first file in an ODF package needs to be the mimetype file and uncompressed
 	})
 	if err != nil {
-		return nil, utils.FormatError(document.ErrMimetype, "unable to create mimetype file in archive")
+		return nil, utils.FormatError(ErrMimetype, "unable to create mimetype file in archive")
 	}
 
 	_, err = f.Write(mimetype)
-
 	if err != nil {
-		return nil, utils.FormatError(document.ErrMimetype, "unable to create mimetype file in archive")
+		return nil, utils.FormatError(ErrMimetype, "unable to create mimetype file in archive")
 	}
 
 	// Retype manifest.xml
@@ -182,23 +207,23 @@ func (o *Odf) writeMimetype(ov document.Overrides, zipWriter *zip.Writer) ([]str
 		fd.Close()
 
 		if err != nil {
-			return nil, utils.FormatError(document.ErrMimetype, "unable to read manifest.xml")
+			return nil, utils.FormatError(ErrMimetype, "unable to read manifest.xml")
 		}
 	}
 
 	manifest, err := retypeManifest(manifestBytes, mimetype)
 	if err != nil {
-		return nil, utils.FormatError(document.ErrMimetype, "unable to retype manifest.xml")
+		return nil, utils.FormatError(ErrMimetype, "unable to retype manifest.xml")
 	}
 
-	ov["META-INF/manifest.xml"] = document.Override{
+	ov["META-INF/manifest.xml"] = Override{
 		Data: manifest,
 	}
 
 	return []string{"mimetype"}, nil
 }
 
-func (o *Odf) writeOverrides(writtenFiles []string, ov document.Overrides, zipWriter *zip.Writer) ([]string, error) {
+func (o *Odf) writeOverrides(writtenFiles []string, ov Overrides, zipWriter *zip.Writer) ([]string, error) {
 	for fname, fdata := range ov {
 		writtenFiles = append(writtenFiles, fname)
 
@@ -215,13 +240,13 @@ func (o *Odf) writeOverrides(writtenFiles []string, ov document.Overrides, zipWr
 		// Write file
 		f, err := zipWriter.Create(fname)
 		if err != nil {
-			return nil, utils.FormatError(document.ErrOverride,
+			return nil, utils.FormatError(ErrOverride,
 				fmt.Sprintf("unable to create file %s fom override in final archive: %q", fname, err))
 		}
 
 		_, err = f.Write(fdata.Data)
 		if err != nil {
-			return nil, utils.FormatError(document.ErrOverride,
+			return nil, utils.FormatError(ErrOverride,
 				fmt.Sprintf("unable to write file %s fom override in final archive: %q", fname, err))
 		}
 	}
@@ -231,7 +256,7 @@ func (o *Odf) writeOverrides(writtenFiles []string, ov document.Overrides, zipWr
 
 // Write untouched files contained in the template package which were not processed by any override.
 func (o *Odf) writeUntouched(writtenFiles []string, zipWriter *zip.Writer) error {
-	for _, v := range o.template.GetZipFiles() {
+	for _, v := range o.zipFD.File {
 		// Skip already written files (or just skipped/deleted files)
 		if slices.Contains(writtenFiles, v.Name) {
 			continue
@@ -240,24 +265,24 @@ func (o *Odf) writeUntouched(writtenFiles []string, zipWriter *zip.Writer) error
 		// Write file from loaded ODF to new package
 		f, err := zipWriter.Create(v.Name)
 		if err != nil {
-			return utils.FormatError(document.ErrArchive, fmt.Sprintf("unable to recreate file %s from template: %q", v.Name, err))
+			return utils.FormatError(ErrArchive, fmt.Sprintf("unable to recreate file %s from template: %q", v.Name, err))
 		}
 
 		data, err := v.Open()
 		if err != nil {
-			return utils.FormatError(document.ErrArchive, fmt.Sprintf("unable to open file %s from template: %q", v.Name, err))
+			return utils.FormatError(ErrArchive, fmt.Sprintf("unable to open file %s from template: %q", v.Name, err))
 		}
 
 		dataBytes, err := ioutil.ReadAll(data)
 		data.Close()
 
 		if err != nil {
-			return utils.FormatError(document.ErrArchive, fmt.Sprintf("unable to read file %s from template: %q", v.Name, err))
+			return utils.FormatError(ErrArchive, fmt.Sprintf("unable to read file %s from template: %q", v.Name, err))
 		}
 
 		_, err = f.Write(dataBytes)
 		if err != nil {
-			return utils.FormatError(document.ErrArchive, fmt.Sprintf("unable to write file %s to archive: %q", v.Name, err))
+			return utils.FormatError(ErrArchive, fmt.Sprintf("unable to write file %s to archive: %q", v.Name, err))
 		}
 	}
 

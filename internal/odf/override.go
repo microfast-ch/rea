@@ -1,4 +1,4 @@
-package document
+package odf
 
 // Overrides defines an override identified by the file path as map key.
 type Overrides map[string]Override

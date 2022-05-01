@@ -1,4 +1,4 @@
-package writer
+package document
 
 import (
 	"bytes"
@@ -11,14 +11,11 @@ import (
 
 func TestTemplateODT(t *testing.T) {
 	// Load template without any template
-	testdata, err := ioutil.ReadFile("../../testdata/Basic1.ott")
-	require.Nil(t, err)
-
-	tmpl, err := odf.New(bytes.NewReader(testdata), int64(len(testdata)))
+	tmpl, err := NewFromFile("../../testdata/Basic1.ott")
 	require.Nil(t, err)
 
 	out := bytes.NewBuffer([]byte(""))
-	_, err = Write(tmpl, &Model{}, out)
+	_, err = tmpl.Write(&Model{}, out)
 	require.Nil(t, err)
 
 	// Readout content.xml and new mimetype
@@ -35,3 +32,5 @@ func TestTemplateODT(t *testing.T) {
 	require.Greater(t, len(content), 10000)
 	contentFD.Close()
 }
+
+// TODO TestTemplateOOXML

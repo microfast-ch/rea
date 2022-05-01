@@ -5,7 +5,6 @@ import (
 	"io/ioutil"
 	"testing"
 
-	"github.com/microfast-ch/rea/internal/document"
 	"github.com/stretchr/testify/require"
 )
 
@@ -68,14 +67,14 @@ func TestWrite(t *testing.T) {
 
 	// Override mimetype file, delete content.xml and add new file
 	buf = new(bytes.Buffer)
-	ov := document.Overrides{
-		"mimetype": document.Override{
+	ov := Overrides{
+		"mimetype": Override{
 			Data: []byte("application/vnd.oasis.opendocument.text"),
 		},
-		"content.xml": document.Override{
+		"content.xml": Override{
 			Delete: true,
 		},
-		"extra.txt": document.Override{
+		"extra.txt": Override{
 			Data: []byte("my-extra-file"),
 		},
 	}

@@ -8,7 +8,7 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/djboris9/rea/internal/utils"
+	"github.com/microfast-ch/rea/internal/utils"
 	"github.com/djboris9/xmltree"
 )
 

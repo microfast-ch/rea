@@ -6,9 +6,9 @@ import (
 	"log"
 	"os"
 
-	"github.com/djboris9/rea/internal/factory"
-	"github.com/djboris9/rea/internal/writer"
-	"github.com/djboris9/rea/pkg/bundle"
+	"github.com/microfast-ch/rea/internal/factory"
+	"github.com/microfast-ch/rea/internal/writer"
+	"github.com/microfast-ch/rea/pkg/bundle"
 	"github.com/spf13/cobra"
 	"gopkg.in/yaml.v3"
 )

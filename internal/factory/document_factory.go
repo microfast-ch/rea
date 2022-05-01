@@ -5,9 +5,9 @@ import (
 	"fmt"
 	"path/filepath"
 
-	"github.com/djboris9/rea/internal/document"
-	"github.com/djboris9/rea/internal/odf"
-	"github.com/djboris9/rea/internal/ooxml"
+	"github.com/microfast-ch/rea/internal/document"
+	"github.com/microfast-ch/rea/internal/odf"
+	"github.com/microfast-ch/rea/internal/ooxml"
 )
 
 var errUnsupportedFileExtension = errors.New("unsupported file extension")

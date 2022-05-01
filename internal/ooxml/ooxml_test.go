@@ -5,7 +5,7 @@ import (
 	"io/ioutil"
 	"testing"
 
-	"github.com/djboris9/rea/internal/document"
+	"github.com/microfast-ch/rea/internal/document"
 	"github.com/stretchr/testify/require"
 )
 

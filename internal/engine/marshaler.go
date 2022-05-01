@@ -7,7 +7,7 @@ import (
 	"fmt"
 	"io"
 
-	"github.com/djboris9/rea/internal/utils"
+	"github.com/microfast-ch/rea/internal/utils"
 )
 
 var ErrXMLMarshalling = errors.New("xmlMarshallingErr")

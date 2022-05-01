@@ -1,7 +1,7 @@
 package main
 
 import (
-	"github.com/djboris9/rea/cmd"
+	"github.com/microfast-ch/rea/cmd"
 )
 
 func main() {

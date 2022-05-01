@@ -1,4 +1,4 @@
-module github.com/djboris9/rea
+module github.com/microfast-ch/rea
 
 go 1.18
 

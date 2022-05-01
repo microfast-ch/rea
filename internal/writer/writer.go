@@ -6,9 +6,9 @@ import (
 	"io/ioutil"
 	"strings"
 
-	"github.com/djboris9/rea/internal/document"
-	"github.com/djboris9/rea/internal/engine"
-	"github.com/djboris9/rea/internal/utils"
+	"github.com/microfast-ch/rea/internal/document"
+	"github.com/microfast-ch/rea/internal/engine"
+	"github.com/microfast-ch/rea/internal/utils"
 	"github.com/djboris9/xmltree"
 )
 

@@ -9,6 +9,7 @@ import (
 	"github.com/djboris9/xmltree"
 	"github.com/microfast-ch/rea/internal/engine"
 	"github.com/microfast-ch/rea/internal/odf"
+	"github.com/microfast-ch/rea/internal/ooxml"
 )
 
 // TODO: Better error description and use it in Go style.
@@ -30,6 +31,8 @@ func (p *PackagedDocument) Write(model *Model, out io.Writer) (*ProcessingData, 
 	switch p.doc.(type) {
 	case *odf.Odf:
 		return p.processOdf(model, out)
+	case *ooxml.OOXML:
+		return p.processOoxml(model, out)
 	default:
 		return nil, ErrUnknownType
 	}

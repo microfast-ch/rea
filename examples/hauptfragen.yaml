@@ -1,0 +1,12 @@
+data:
+  titel: Zulassung und Überprüfung kassenpflichtiger Medikamente
+  departemente:
+    - EDA
+    - EDI
+    - VBS
+  problemhinweisTitle: Gegenstand
+  problemhinweisText: Das ist der <i>Problemhinweis</i> <strong>Lorem ipsum dolor sit</strong> amet, consectetur adipiscing elit. Sed non risus. Suspendisse lectus tortor, dignissim sit amet, adipiscing nec, ultricies sed, dolor.
+  hauptfragenTitle: Hauptfragen
+  hauptfragenText: <ul><li>Wie sind die Verfahren der Zulassung und Überprüfung der Kassenpflicht von Arzneimitteln zu beurteilen?</li><li><strong>Das zweit Frageelemnt</strong></li></ul>
+  hinweisTitle: Hinweis
+  hinweisText: Das ist der Hinweis. Und ob ihr wirklich richtig steht seht ihr wenn das Licht angeht.

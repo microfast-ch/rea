@@ -8,8 +8,8 @@ data:
   order:
     title: "Home Accessories"
     items:
-    - Super strong glue
-    - Electrical waterpump
-    - Flexible pipe, 5m
+      - Super strong glue
+      - Electrical waterpump
+      - Flexible pipe, 5m
     amount: "Fr. 120.-"
   epay: false

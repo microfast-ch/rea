@@ -2,7 +2,8 @@ package ooxml
 
 import (
 	"bytes"
-	"io/ioutil"
+	"io"
+	"os"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -12,7 +13,7 @@ func TestNew(t *testing.T) {
 	_, err := New(bytes.NewReader([]byte("")), 10)
 	require.Error(t, err)
 
-	testdata, err := ioutil.ReadFile("../../testdata/Basic1.docx")
+	testdata, err := os.ReadFile("../../testdata/Basic1.docx")
 	require.Nil(t, err)
 
 	doc, err := New(bytes.NewReader(testdata), int64(len(testdata)))
@@ -24,7 +25,7 @@ func TestNew(t *testing.T) {
 	require.Nil(t, err)
 
 	// Test invalid file
-	testdata, err = ioutil.ReadFile("../../testdata/Basic1.ott")
+	testdata, err = os.ReadFile("../../testdata/Basic1.ott")
 	require.Nil(t, err)
 
 	doc, err = New(bytes.NewReader(testdata), int64(len(testdata)))
@@ -83,7 +84,7 @@ func TestWrite(t *testing.T) {
 
 	updatedDoc, err := doc.Open("word/document.xml")
 	require.Nil(t, err)
-	updatedData, err := ioutil.ReadAll(updatedDoc)
+	updatedData, err := io.ReadAll(updatedDoc)
 	require.Nil(t, err)
 	require.Equal(t, []byte("my-extra-file"), updatedData)
 }
